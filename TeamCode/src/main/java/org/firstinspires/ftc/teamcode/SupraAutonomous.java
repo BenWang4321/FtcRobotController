@@ -35,6 +35,8 @@ public class SupraAutonomous extends LinearOpMode {
     public static final double NEW_I = 0.1;
     public static final double NEW_D = 0.2;
     public static final double NEW_F = 0.5;
+
+    public double currentX, currentY, currentZ;
     double yaw;
     double pitch;
     double roll;
@@ -63,26 +65,26 @@ public class SupraAutonomous extends LinearOpMode {
         roll = robotOrientation.getRoll();
 
 
-        frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
-        frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
-        backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
-        backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+        frontLeft = hardwareMap.get(DcMotorEx.class, "front_left");
+        backLeft = hardwareMap.get(DcMotorEx.class, "back_left");
+        frontRight = hardwareMap.get(DcMotorEx.class, "front_right");
+        backRight = hardwareMap.get(DcMotorEx.class, "back_right");
 
         PIDFCoefficients pidfNew = new PIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
         frontLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         backLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         frontRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         backRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
+        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         frontLeft.setTargetPosition(firstCheckPoint);
         frontRight.setTargetPosition(firstCheckPoint);
         backLeft.setTargetPosition(firstCheckPoint);
         backRight.setTargetPosition(firstCheckPoint);
         initAprilTag();
-        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         // Wait for the DS start button to be touched.
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
@@ -91,7 +93,6 @@ public class SupraAutonomous extends LinearOpMode {
         waitForStart();
 
         PIDFCoefficients pidfOrig = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-
         PIDFCoefficients pidfModified = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
 
         if (opModeIsActive()) {
