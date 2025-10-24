@@ -75,15 +75,17 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         frontRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         backRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
-        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         frontLeft.setTargetPosition(firstCheckPoint);
         frontRight.setTargetPosition(firstCheckPoint);
         backLeft.setTargetPosition(firstCheckPoint);
         backRight.setTargetPosition(firstCheckPoint);
+
+        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
         initAprilTag();
 
         // Wait for the DS start button to be touched.
