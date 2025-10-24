@@ -1,20 +1,16 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -28,20 +24,14 @@ import java.util.List;
 public class SupraAutonomous extends LinearOpMode {
     IMU imu;
     IMU.Parameters myIMUparameters;
-    private DcMotorEx frontLeft, backLeft, frontRight, backRight;
-
     YawPitchRollAngles robotOrientation;
-    public static final double NEW_P = 2.5;
-    public static final double NEW_I = 0.1;
-    public static final double NEW_D = 0.2;
-    public static final double NEW_F = 0.5;
 
     public double currentX, currentY, currentZ;
     double yaw;
     double pitch;
     double roll;
     double velocity;
-    public final int firstCheckPoint = 1000;
+    public final int firstCheckPoint = 2000;
     public int currentCheckPoint = firstCheckPoint;
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -56,49 +46,58 @@ public class SupraAutonomous extends LinearOpMode {
     private VisionPortal visionPortal;
 
     public void runOpMode() {
-        frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
-        backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
-        frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
-        backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+        DcMotorEx frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
+        DcMotorEx backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
+        DcMotorEx frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
+        DcMotorEx backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
         waitForStart();
 
-        imu = hardwareMap.get(IMU.class, "imu");
-        myIMUparameters = new IMU.Parameters(new RevHubOrientationOnRobot(new Orientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES, 90, 0, -45, 0)));
-        robotOrientation = imu.getRobotYawPitchRollAngles();
-        imu.initialize(myIMUparameters);
+        frontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
+        frontLeft.setMotorEnable();
+        frontRight.setMotorEnable();
+        backLeft.setMotorEnable();
+        backRight.setMotorEnable();
 
-        yaw = robotOrientation.getYaw(AngleUnit.DEGREES);
-        pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
-        roll = robotOrientation.getRoll(AngleUnit.DEGREES);
-
-
-
-        PIDFCoefficients pidfNew = new PIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
-        frontLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
-        backLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
-        frontRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
-        backRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
-
-        frontLeft.setTargetPosition(currentCheckPoint);
-        frontRight.setTargetPosition(currentCheckPoint);
-        backLeft.setTargetPosition(currentCheckPoint);
-        backRight.setTargetPosition(currentCheckPoint);
-
-        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         if (opModeIsActive()) {
             while (opModeIsActive()) {
 
+                frontLeft.setTargetPosition(-currentCheckPoint);
+                frontRight.setTargetPosition(currentCheckPoint);
+                backLeft.setTargetPosition(currentCheckPoint);
+                backRight.setTargetPosition(-currentCheckPoint);
 
+                frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
+                frontLeft.setVelocity(2000);
+                frontRight.setVelocity(2000);
+                backLeft.setVelocity(2000);
+                backRight.setVelocity(2000);
+
+                sleep(3000);
+                currentCheckPoint = -currentCheckPoint;
                 // Share the CPU.
                 sleep(20);
+                telemetry.addData("Velocity", frontLeft.getVelocity());
+                telemetry.addData("Velocity", frontRight.getVelocity());
+                telemetry.update();
             }
         }
 
@@ -193,6 +192,5 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
-        telemetry.addData("Position", yaw);
     }   // end method telemetryAprilTag()
 }
