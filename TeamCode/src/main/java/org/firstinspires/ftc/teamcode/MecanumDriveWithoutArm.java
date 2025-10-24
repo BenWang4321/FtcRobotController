@@ -16,9 +16,6 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
     public DcMotor backLeft = null;
     public DcMotor backRight = null;
 
-
-
-
     @Override
     public void runOpMode() throws InterruptedException {
         // Initialize motors
@@ -69,15 +66,15 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
 
 
             if (max > 1) {
-                //frontLeft.setPower(frontLeftPower / max);
+                frontLeft.setPower(frontLeftPower / max);
                 frontRight.setPower(frontRightPower / max);
-                //backLeft.setPower(backLeftPower / max);
-                //backRight.setPower(backRightPower / max);
+                backLeft.setPower(backLeftPower / max);
+                backRight.setPower(backRightPower / max);
             } else {
-                //frontLeft.setPower(frontLeftPower);
+                frontLeft.setPower(frontLeftPower);
                 frontRight.setPower(frontRightPower);
-                //backLeft.setPower(backLeftPower);
-                //backRight.setPower(backRightPower);
+                backLeft.setPower(backLeftPower);
+                backRight.setPower(backRightPower);
             }
         }
     }
