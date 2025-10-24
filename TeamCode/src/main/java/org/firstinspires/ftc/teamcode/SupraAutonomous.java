@@ -3,8 +3,10 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -61,26 +63,26 @@ public class SupraAutonomous extends LinearOpMode {
         roll = robotOrientation.getRoll();
 
 
-        /*frontLeft = hardwareMap.get(DcMotorEx.class, "front_left");
-        backLeft = hardwareMap.get(DcMotorEx.class, "back_left");
-        frontRight = hardwareMap.get(DcMotorEx.class, "front_right");
-        backRight = hardwareMap.get(DcMotorEx.class, "back_right");
+        frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
+        frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
+        backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
+        backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
         PIDFCoefficients pidfNew = new PIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
         frontLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         backLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         frontRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
         backRight.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
-        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         frontLeft.setTargetPosition(firstCheckPoint);
         frontRight.setTargetPosition(firstCheckPoint);
         backLeft.setTargetPosition(firstCheckPoint);
-        backRight.setTargetPosition(firstCheckPoint);*/
+        backRight.setTargetPosition(firstCheckPoint);
         initAprilTag();
+        frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         // Wait for the DS start button to be touched.
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
@@ -88,9 +90,9 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.update();
         waitForStart();
 
-        //PIDFCoefficients pidfOrig = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
+        PIDFCoefficients pidfOrig = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        //PIDFCoefficients pidfModified = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
+        PIDFCoefficients pidfModified = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
 
         if (opModeIsActive()) {
             while (opModeIsActive()) {
@@ -98,11 +100,11 @@ public class SupraAutonomous extends LinearOpMode {
                 telemetryAprilTag();
 
                 //Push telemetry to the Driver Station.
-                /*telemetry.addData("Runtime (sec)", "%.01f", getRuntime());
+                telemetry.addData("Runtime (sec)", "%.01f", getRuntime());
                 telemetry.addData("P,I,D,F (orig)", "%.04f, %.04f, %.04f, %.04f",
                         pidfOrig.p, pidfOrig.i, pidfOrig.d, pidfOrig.f);
                 telemetry.addData("P,I,D,F (modified)", "%.04f, %.04f, %.04f, %.04f",
-                        pidfModified.p, pidfModified.i, pidfModified.d, pidfModified.f);*/
+                        pidfModified.p, pidfModified.i, pidfModified.d, pidfModified.f);
                 telemetry.update();
 
                 visionPortal.resumeStreaming();

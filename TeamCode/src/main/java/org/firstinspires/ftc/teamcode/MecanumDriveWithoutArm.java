@@ -42,8 +42,8 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
 
         while (opModeIsActive()) {
             // Get joystick values
-            double fb = -gamepad1.left_stick_y * 0.7; // Scale for smoother control
-            double strafe = -gamepad1.left_stick_x * 0.7; // Scale strafing
+            double fb = -gamepad1.left_stick_x * 0.7; // Scale for smoother control
+            double strafe = -gamepad1.left_stick_y * 0.7; // Scale strafing
             double turn = gamepad1.right_stick_x * 0.6;
 
             //fb & turn: fr, fl inverted
