@@ -56,6 +56,13 @@ public class SupraAutonomous extends LinearOpMode {
     private VisionPortal visionPortal;
 
     public void runOpMode() {
+        frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
+        backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
+        frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
+        backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+
+        waitForStart();
+
         imu = hardwareMap.get(IMU.class, "imu");
         myIMUparameters = new IMU.Parameters(new RevHubOrientationOnRobot(new Orientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES, 90, 0, -45, 0)));
         robotOrientation = imu.getRobotYawPitchRollAngles();
@@ -67,10 +74,7 @@ public class SupraAutonomous extends LinearOpMode {
         pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
         roll = robotOrientation.getRoll(AngleUnit.DEGREES);
 
-        frontLeft = hardwareMap.get(DcMotorEx.class, "front_left");
-        backLeft = hardwareMap.get(DcMotorEx.class, "back_left");
-        frontRight = hardwareMap.get(DcMotorEx.class, "front_right");
-        backRight = hardwareMap.get(DcMotorEx.class, "back_right");
+
 
         PIDFCoefficients pidfNew = new PIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
         frontLeft.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidfNew);
@@ -88,38 +92,10 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        initAprilTag();
-
-        velocity = frontLeft.getVelocity();
-
-        //calculate x and z coordinates based off yaw using trigonometry
-        sleep(Math.round(currentCheckPoint / velocity));
-        currentX += Math.cos(yaw) * currentCheckPoint;
-        currentZ += Math.sin(yaw) * currentCheckPoint;
-        currentCheckPoint = 0;
-        // Wait for the DS start button to be touched.
-        telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
-        telemetry.addData(">", "Touch START to start OpMode");
-        telemetry.update();
-        waitForStart();
-
-        PIDFCoefficients pidfOrig = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-        PIDFCoefficients pidfModified = frontLeft.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-
         if (opModeIsActive()) {
             while (opModeIsActive()) {
 
-                telemetryAprilTag();
 
-                //Push telemetry to the Driver Station.
-                telemetry.addData("Runtime (sec)", "%.01f", getRuntime());
-                telemetry.addData("P,I,D,F (orig)", "%.04f, %.04f, %.04f, %.04f",
-                        pidfOrig.p, pidfOrig.i, pidfOrig.d, pidfOrig.f);
-                telemetry.addData("P,I,D,F (modified)", "%.04f, %.04f, %.04f, %.04f",
-                        pidfModified.p, pidfModified.i, pidfModified.d, pidfModified.f);
-                telemetry.update();
-
-                visionPortal.resumeStreaming();
 
                 // Share the CPU.
                 sleep(20);
@@ -127,7 +103,6 @@ public class SupraAutonomous extends LinearOpMode {
         }
 
         // Save more CPU resources when camera is no longer needed.
-        visionPortal.close();
     }
 
     /**
@@ -212,22 +187,12 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addData("# AprilTags Detected", currentDetections.size());
 
         // Step through the list of detections and display info for each one.
-        for (AprilTagDetection detection : currentDetections) {
-            if (detection.metadata != null) {
-                telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (cm)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (cm, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
-            } else {
-                telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
-                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
-            }
-        }   // end for() loop
+
 
         // Add "key" information to telemetry
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
-        telemetry.addLine(String.format("\n==== (ID %d) %s", yaw, pitch, roll));
+        telemetry.addData("Position", yaw);
     }   // end method telemetryAprilTag()
 }

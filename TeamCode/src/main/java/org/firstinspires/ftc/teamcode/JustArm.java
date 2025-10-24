@@ -22,7 +22,7 @@ public class JustArm extends LinearOpMode {
             double eject = gamepad2.right_stick_y;
 
             ejector1.setPower(eject);
-            ejector2.setPower(-eject);
+            ejector2.setPower(eject);
         }
 
     }
