@@ -40,8 +40,9 @@ public class SupraAutonomous extends LinearOpMode {
     double yaw;
     double pitch;
     double roll;
-
+    double velocity;
     public final int firstCheckPoint = 1000;
+    public int currentCheckPoint = firstCheckPoint;
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -60,10 +61,11 @@ public class SupraAutonomous extends LinearOpMode {
         robotOrientation = imu.getRobotYawPitchRollAngles();
         imu.initialize(myIMUparameters);
 
-        yaw = robotOrientation.getYaw();
-        pitch = robotOrientation.getPitch();
-        roll = robotOrientation.getRoll();
 
+
+        yaw = robotOrientation.getYaw(AngleUnit.DEGREES);
+        pitch = robotOrientation.getPitch(AngleUnit.DEGREES);
+        roll = robotOrientation.getRoll(AngleUnit.DEGREES);
 
         frontLeft = hardwareMap.get(DcMotorEx.class, "front_left");
         backLeft = hardwareMap.get(DcMotorEx.class, "back_left");
@@ -80,12 +82,21 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        frontLeft.setTargetPosition(firstCheckPoint);
-        frontRight.setTargetPosition(firstCheckPoint);
-        backLeft.setTargetPosition(firstCheckPoint);
-        backRight.setTargetPosition(firstCheckPoint);
+        frontLeft.setTargetPosition(currentCheckPoint);
+        frontRight.setTargetPosition(currentCheckPoint);
+        backLeft.setTargetPosition(currentCheckPoint);
+        backRight.setTargetPosition(currentCheckPoint);
+
+
         initAprilTag();
 
+        velocity = frontLeft.getVelocity();
+
+        //calculate x and z coordinates based off yaw using trigonometry
+        sleep(Math.round(currentCheckPoint / velocity));
+        currentX += Math.cos(yaw) * currentCheckPoint;
+        currentZ += Math.sin(yaw) * currentCheckPoint;
+        currentCheckPoint = 0;
         // Wait for the DS start button to be touched.
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
         telemetry.addData(">", "Touch START to start OpMode");
