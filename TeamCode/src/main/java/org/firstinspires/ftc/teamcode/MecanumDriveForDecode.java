@@ -1,8 +1,11 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.annotation.SuppressLint;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
@@ -15,10 +18,10 @@ import java.util.List;
 
 @TeleOp(name = "Mecanum drive for Decode 2025-2026", group = "TeleOp")
 public class MecanumDriveForDecode extends LinearOpMode {
-    public DcMotor frontLeft = null;
-    public DcMotor frontRight = null;
-    public DcMotor backLeft = null;
-    public DcMotor backRight = null;
+    public DcMotorEx frontLeft = null;
+    public DcMotorEx frontRight = null;
+    public DcMotorEx backLeft = null;
+    public DcMotorEx backRight = null;
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -35,32 +38,29 @@ public class MecanumDriveForDecode extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         // Initialize motors
-        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
-        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
-        backRight = hardwareMap.get(DcMotor.class, "backRight");
+        frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
+        frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
+        backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
+        backRight = hardwareMap.get(DcMotorEx.class, "backRight");
         // Reverse the right side motors for proper direction
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
-
         // Set motors to run without encoders
         frontLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         frontRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-
         waitForStart();
 
 
         while (opModeIsActive()) {
             // Get joystick values
-            double fb = -gamepad1.left_stick_y * 0.7; // Scale for smoother control
-            double strafe = -gamepad1.left_stick_x * 0.7; // Scale strafing
-            double turn = gamepad1.right_stick_x * 0.6;
+            double fb = -gamepad1.left_stick_y; // Scale for smoother control
+            double strafe = -gamepad1.left_stick_x; // Scale strafing
+            double turn = gamepad1.right_stick_x;
 
             //fb & turn: fr, fl inverted
             //strafe: fr, bl inverted
@@ -92,6 +92,7 @@ public class MecanumDriveForDecode extends LinearOpMode {
                 backLeft.setPower(backLeftPower);
                 backRight.setPower(backRightPower);
             }
+
         }
     }
 
@@ -164,6 +165,7 @@ public class MecanumDriveForDecode extends LinearOpMode {
     /**
      * Add telemetry about AprilTag detections.
      */
+    @SuppressLint("DefaultLocale")
     private void telemetryAprilTag() {
 
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
