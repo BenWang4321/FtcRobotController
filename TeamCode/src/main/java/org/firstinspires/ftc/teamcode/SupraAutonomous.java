@@ -98,7 +98,7 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
-
+        
         while (opModeIsActive()) {
             for (AprilTagDetection detection : aprilTag.getDetections()) {
                 switch (detection.id) {
