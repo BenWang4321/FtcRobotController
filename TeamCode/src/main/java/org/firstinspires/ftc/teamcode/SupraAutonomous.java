@@ -64,16 +64,18 @@ public class SupraAutonomous extends LinearOpMode {
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
-        /*forward*/         supraCheckpoints.add(new int[]{10000, 10000, 10000, 10000});
-        /*backward*/        supraCheckpoints.add(new int[]{-10000, -10000, -10000, -10000});
-        /*strafe left*/     supraCheckpoints.add(new int[]{-10000, 10000, 10000, -10000});
-        /*strafe right*/    supraCheckpoints.add(new int[]{10000, -10000, -10000, 10000});
-        /*forward left*/    supraCheckpoints.add(new int[]{10000, 0, 0, 10000});
-        /*forward right*/   supraCheckpoints.add(new int[]{0, 10000, 10000, 0});
-        /*backward left*/   supraCheckpoints.add(new int[]{-10000, 0, 0, -10000});
-        /*backward right*/  supraCheckpoints.add(new int[]{0, -10000, -10000, 0});
-        /*turn left*/       supraCheckpoints.add(new int[]{-10000, 10000, -10000, 10000});
-        /*turn right*/      supraCheckpoints.add(new int[]{10000, -10000, 10000, -10000});
+        supraCheckpoints.add(new int[]{0, 0, 0, 0});
+
+        /*forward*/         addCheckpoint(10000, 10000, 10000, 10000);
+        /*backward*/        addCheckpoint(-10000, -10000, -10000, -10000);
+        /*strafe left*/     addCheckpoint(-10000, 10000, 10000, -10000);
+        /*strafe right*/    addCheckpoint(10000, -10000, -10000, 10000);
+        /*forward left*/    addCheckpoint(10000, 0, 0, 10000);
+        /*forward right*/   addCheckpoint(0, 10000, 10000, 0);
+        /*backward left*/   addCheckpoint(-10000, 0, 0, -10000);
+        /*backward right*/  addCheckpoint(0, -10000, -10000, 0);
+        /*turn left*/       addCheckpoint(-10000, 10000, -10000, 10000);
+        /*turn right*/      addCheckpoint(10000, -10000, -10000, 10000);
 
 
         char[] ballOrder = new char[3];
@@ -126,11 +128,6 @@ public class SupraAutonomous extends LinearOpMode {
             frontRight.setPower(1);
             backLeft.setPower(1);
             backRight.setPower(1);
-
-            frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
             frontLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[0]);
             frontRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[1]);
@@ -262,7 +259,21 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("RBE = Range, Bearing & Elevation");
     }   // end method telemetryAprilTag()
 
-
+    /**
+     * Adds a checkpoint for the motor on the robot.
+     * Does all the calculations of the positions for you,
+     * so you can just add how much you want the motor to change,
+     * not where you want the motor to change to.
+     * @param frontLeft     sets the next position for the front left motor
+     * @param frontRight    sets the next position for the front right motor
+     * @param backLeft      sets the next position for the back left motor
+     * @param backRight     sets the next position for the back right motor
+     */
+    private void addCheckpoint(int frontLeft, int frontRight, int backLeft, int backRight) {
+        int[] currentCheckpoint = supraCheckpoints.get(supraCheckpoints.size() - 1);
+        supraCheckpoints.add(new int[]{frontLeft + currentCheckpoint[0], frontRight + currentCheckpoint[1],
+                backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
+    }
 
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
