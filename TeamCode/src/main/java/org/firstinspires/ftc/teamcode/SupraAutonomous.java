@@ -29,32 +29,30 @@ public class SupraAutonomous extends LinearOpMode {
 
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
     ModernRoboticsI2cRangeSensor rangeSensor;
-
     double cameraDist;
     DcMotor ejector1, ejector2 = null;
     IMU imu;
 
-    int checkpointNumber = 0;
     IMU.Parameters myIMUparameters;
     YawPitchRollAngles robotOrientation;
 
+    double distancePerRotation = 2.35619449019;
+    double speed;
     public double currentX, currentY, currentZ;
     double yaw;
     double pitch;
     double roll;
     double velocity;
-    public final int[] firstCheckPoint = new int[]{2000, 2000, 2000, 2000};
 
     List<int[]> supraCheckpoints = new ArrayList<>();
+    int currentCheckPoint = 0;
 
-    public int[] currentCheckPoint = firstCheckPoint;
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
      * The variable to store our instance of the AprilTag processor.
      */
     private AprilTagProcessor aprilTag;
-
     /**
      * The variable to store our instance of the vision portal.
      */
@@ -65,12 +63,18 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
-        ejector1 = hardwareMap.get(DcMotor.class, "ejector1");
-        ejector2 = hardwareMap.get(DcMotor.class, "ejector2");
-        rangeSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "sensor_range");
 
+        /*forward*/         supraCheckpoints.add(new int[]{10000, 10000, 10000, 10000});
+        /*backward*/        supraCheckpoints.add(new int[]{-10000, -10000, -10000, -10000});
+        /*strafe left*/     supraCheckpoints.add(new int[]{-10000, 10000, 10000, -10000});
+        /*strafe right*/    supraCheckpoints.add(new int[]{10000, -10000, -10000, 10000});
+        /*forward left*/    supraCheckpoints.add(new int[]{10000, 0, 0, 10000});
+        /*forward right*/   supraCheckpoints.add(new int[]{0, 10000, 10000, 0});
+        /*backward left*/   supraCheckpoints.add(new int[]{-10000, 0, 0, -10000});
+        /*backward right*/  supraCheckpoints.add(new int[]{0, -10000, -10000, 0});
+        /*turn left*/       supraCheckpoints.add(new int[]{-10000, 10000, -10000, 10000});
+        /*turn right*/      supraCheckpoints.add(new int[]{10000, -10000, 10000, -10000});
 
-        supraCheckpoints.add(new int[]{1000,1000,1000,1000});
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
@@ -79,10 +83,6 @@ public class SupraAutonomous extends LinearOpMode {
 
         waitForStart();
 
-        frontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -94,9 +94,9 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft.setMotorEnable();
         backRight.setMotorEnable();
 
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
-        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
         
         while (opModeIsActive()) {
@@ -122,36 +122,37 @@ public class SupraAutonomous extends LinearOpMode {
                 }
             }
 
-            frontLeft.setTargetPosition(-currentCheckPoint[0]);
-            frontRight.setTargetPosition(currentCheckPoint[1]);
-            backLeft.setTargetPosition(currentCheckPoint[2]);
-            backRight.setTargetPosition(-currentCheckPoint[3]);
+            frontLeft.setPower(1);
+            frontRight.setPower(1);
+            backLeft.setPower(1);
+            backRight.setPower(1);
+
+            frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+            frontLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[0]);
+            frontRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[1]);
+            backLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[2]);
+            backRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[3]);
 
             frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-            for (int[] powers : supraCheckpoints) {
-                frontLeft.setVelocity(powers[0]);
-                frontRight.setVelocity(powers[1]);
-                backLeft.setVelocity(powers[2]);
-                backRight.setVelocity(powers[3]);
-            }
-
+            speed = frontLeft.getVelocity() * distancePerRotation;
             // Share the CPU
 
-            cameraDist = rangeSensor.getDistance(DistanceUnit.CM);
              //detects if the motor has arrived to position
             if (frontRight.getPower() < 0.1 && frontLeft.getPower() < 0.1 &&
                     backRight.getPower() < 0.1 && backLeft.getPower() < 0.1) {
-                currentCheckPoint = supraCheckpoints.get(checkpointNumber);
+                currentCheckPoint += 1;
             }
 
             telemetryAprilTag();
-            telemetry.addData("Velocity: (FL, FR, BL, BR)", "%0.1f, %0.1f, %0.1f, %0.1f",
-                    frontLeft.getVelocity(), frontRight.getVelocity(), backLeft.getVelocity(), backRight.getVelocity());
-            telemetry.addData("cm", "%.2f cm", rangeSensor.getDistance(DistanceUnit.CM));
+            telemetry.addData("speed", speed);
             telemetry.update();
 
         }
@@ -261,11 +262,7 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("RBE = Range, Bearing & Elevation");
     }   // end method telemetryAprilTag()
 
-    private void launchBalls(double launchPower) {
 
-        ejector1.setPower(launchPower);
-        ejector2.setPower(launchPower);
-    }
 
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
