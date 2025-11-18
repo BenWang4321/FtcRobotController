@@ -1,9 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.graphics.Color;
-import android.view.View;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -12,12 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
-import com.qualcomm.robotcore.hardware.NormalizedRGBA;
-import com.qualcomm.robotcore.hardware.SwitchableLight;
 
-import org.firstinspires.ftc.robotcontroller.external.samples.SensorColor;
-import org.firstinspires.ftc.robotcontroller.external.samples.SensorMRColor;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -36,8 +28,6 @@ import java.util.List;
 public class SupraAutonomous extends LinearOpMode {
 
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
-
-    NormalizedColorSensor colorSensor;
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
     DcMotor ejector1, ejector2 = null;
@@ -67,8 +57,6 @@ public class SupraAutonomous extends LinearOpMode {
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
-    View relativeLayout;
-
 
     public void runOpMode() {
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
@@ -76,21 +64,19 @@ public class SupraAutonomous extends LinearOpMode {
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
+        supraCheckpoints.add(new int[]{0, 0, 0, 0});
 
-        int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
-        relativeLayout = ((Activity) hardwareMap.appContext).findViewById(relativeLayoutId);
+        /*forward*/         addCheckpoint(10000, 10000, 10000, 10000);
+        /*backward*/        addCheckpoint(-10000, -10000, -10000, -10000);
+        /*strafe left*/     addCheckpoint(-10000, 10000, 10000, -10000);
+        /*strafe right*/    addCheckpoint(10000, -10000, -10000, 10000);
+        /*forward left*/    addCheckpoint(10000, 0, 0, 10000);
+        /*forward right*/   addCheckpoint(0, 10000, 10000, 0);
+        /*backward left*/   addCheckpoint(-10000, 0, 0, -10000);
+        /*backward right*/  addCheckpoint(0, -10000, -10000, 0);
+        /*turn left*/       addCheckpoint(-10000, 10000, -10000, 10000);
+        /*turn right*/      addCheckpoint(10000, -10000, -10000, 10000);
 
-
-        /*forward*/         supraCheckpoints.add(new int[]{10000, 10000, 10000, 10000});
-        /*backward*/        supraCheckpoints.add(new int[]{-10000, -10000, -10000, -10000});
-        /*strafe left*/     supraCheckpoints.add(new int[]{-10000, 10000, 10000, -10000});
-        /*strafe right*/    supraCheckpoints.add(new int[]{10000, -10000, -10000, 10000});
-        /*forward left*/    supraCheckpoints.add(new int[]{10000, 0, 0, 10000});
-        /*forward right*/   supraCheckpoints.add(new int[]{0, 10000, 10000, 0});
-        /*backward left*/   supraCheckpoints.add(new int[]{-10000, 0, 0, -10000});
-        /*backward right*/  supraCheckpoints.add(new int[]{0, -10000, -10000, 0});
-        /*turn left*/       supraCheckpoints.add(new int[]{-10000, 10000, -10000, 10000});
-        /*turn right*/      supraCheckpoints.add(new int[]{10000, -10000, 10000, -10000});
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
@@ -143,11 +129,6 @@ public class SupraAutonomous extends LinearOpMode {
             backLeft.setPower(1);
             backRight.setPower(1);
 
-            frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
             frontLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[0]);
             frontRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[1]);
             backLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[2]);
@@ -167,19 +148,6 @@ public class SupraAutonomous extends LinearOpMode {
                 currentCheckPoint += 1;
             }
 
-            try {
-                colorDetect(); // actually execute the sample
-            } finally {
-                // On the way out, *guarantee* that the background is reasonable. It doesn't actually start off
-                // as pure white, but it's too much work to dig out what actually was used, and this is good
-                // enough to at least make the screen reasonable again.
-                // Set the panel back to the default color
-                relativeLayout.post(new Runnable() {
-                    public void run() {
-                        relativeLayout.setBackgroundColor(Color.WHITE);
-                    }
-                });
-            }
             telemetryAprilTag();
             telemetry.addData("speed", speed);
             telemetry.update();
@@ -291,44 +259,27 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("RBE = Range, Bearing & Elevation");
     }   // end method telemetryAprilTag()
 
-
+    /**
+     * Adds a checkpoint for the motor on the robot.
+     * Does all the calculations of the positions for you,
+     * so you can just add how much you want the motor to change,
+     * not where you want the motor to change to.
+     * @param frontLeft     sets the next position for the front left motor
+     * @param frontRight    sets the next position for the front right motor
+     * @param backLeft      sets the next position for the back left motor
+     * @param backRight     sets the next position for the back right motor
+     */
+    private void addCheckpoint(int frontLeft, int frontRight, int backLeft, int backRight) {
+        int[] currentCheckpoint = supraCheckpoints.get(supraCheckpoints.size() - 1);
+        supraCheckpoints.add(new int[]{frontLeft + currentCheckpoint[0], frontRight + currentCheckpoint[1],
+                backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
+    }
 
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
     }
     private double[] calculateRobotPosition() {
         return new double[]{};
-    }
-
-    private void colorDetect() {
-        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "colorSensor");
-
-
-        final float[] hsvValues = new float[3];
-
-        if (colorSensor instanceof SwitchableLight) {
-            ((SwitchableLight)colorSensor).enableLight(true);
-        }
-        colorSensor.setGain(1);
-
-        NormalizedRGBA colors = colorSensor.getNormalizedColors();
-        Color.colorToHSV(colors.toColor(), hsvValues);
-
-        telemetry.addLine()
-                .addData("Red", "%.3f", colors.red)
-                .addData("Green", "%.3f", colors.green)
-                .addData("Blue", "%.3f", colors.blue);
-        telemetry.addLine()
-                .addData("Hue", "%.3f", hsvValues[0])
-                .addData("Saturation", "%.3f", hsvValues[1])
-                .addData("Value", "%.3f", hsvValues[2]);
-        telemetry.addData("Alpha", "%.3f", colors.alpha);
-
-        relativeLayout.post(new Runnable() {
-            public void run() {
-                relativeLayout.setBackgroundColor(Color.HSVToColor(hsvValues));
-            }
-        });
     }
 
 }
