@@ -1,6 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.graphics.Color;
+import android.view.View;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -9,7 +12,12 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import com.qualcomm.robotcore.hardware.SwitchableLight;
 
+import org.firstinspires.ftc.robotcontroller.external.samples.SensorColor;
+import org.firstinspires.ftc.robotcontroller.external.samples.SensorMRColor;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -28,6 +36,8 @@ import java.util.List;
 public class SupraAutonomous extends LinearOpMode {
 
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
+
+    NormalizedColorSensor colorSensor;
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
     DcMotor ejector1, ejector2 = null;
@@ -57,12 +67,19 @@ public class SupraAutonomous extends LinearOpMode {
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
+    View relativeLayout;
+
 
     public void runOpMode() {
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+
+
+        int relativeLayoutId = hardwareMap.appContext.getResources().getIdentifier("RelativeLayout", "id", hardwareMap.appContext.getPackageName());
+        relativeLayout = ((Activity) hardwareMap.appContext).findViewById(relativeLayoutId);
+
 
         /*forward*/         supraCheckpoints.add(new int[]{10000, 10000, 10000, 10000});
         /*backward*/        supraCheckpoints.add(new int[]{-10000, -10000, -10000, -10000});
@@ -74,7 +91,6 @@ public class SupraAutonomous extends LinearOpMode {
         /*backward right*/  supraCheckpoints.add(new int[]{0, -10000, -10000, 0});
         /*turn left*/       supraCheckpoints.add(new int[]{-10000, 10000, -10000, 10000});
         /*turn right*/      supraCheckpoints.add(new int[]{10000, -10000, 10000, -10000});
-
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
@@ -151,6 +167,19 @@ public class SupraAutonomous extends LinearOpMode {
                 currentCheckPoint += 1;
             }
 
+            try {
+                colorDetect(); // actually execute the sample
+            } finally {
+                // On the way out, *guarantee* that the background is reasonable. It doesn't actually start off
+                // as pure white, but it's too much work to dig out what actually was used, and this is good
+                // enough to at least make the screen reasonable again.
+                // Set the panel back to the default color
+                relativeLayout.post(new Runnable() {
+                    public void run() {
+                        relativeLayout.setBackgroundColor(Color.WHITE);
+                    }
+                });
+            }
             telemetryAprilTag();
             telemetry.addData("speed", speed);
             telemetry.update();
@@ -269,6 +298,37 @@ public class SupraAutonomous extends LinearOpMode {
     }
     private double[] calculateRobotPosition() {
         return new double[]{};
+    }
+
+    private void colorDetect() {
+        colorSensor = hardwareMap.get(NormalizedColorSensor.class, "colorSensor");
+
+
+        final float[] hsvValues = new float[3];
+
+        if (colorSensor instanceof SwitchableLight) {
+            ((SwitchableLight)colorSensor).enableLight(true);
+        }
+        colorSensor.setGain(1);
+
+        NormalizedRGBA colors = colorSensor.getNormalizedColors();
+        Color.colorToHSV(colors.toColor(), hsvValues);
+
+        telemetry.addLine()
+                .addData("Red", "%.3f", colors.red)
+                .addData("Green", "%.3f", colors.green)
+                .addData("Blue", "%.3f", colors.blue);
+        telemetry.addLine()
+                .addData("Hue", "%.3f", hsvValues[0])
+                .addData("Saturation", "%.3f", hsvValues[1])
+                .addData("Value", "%.3f", hsvValues[2]);
+        telemetry.addData("Alpha", "%.3f", colors.alpha);
+
+        relativeLayout.post(new Runnable() {
+            public void run() {
+                relativeLayout.setBackgroundColor(Color.HSVToColor(hsvValues));
+            }
+        });
     }
 
 }
