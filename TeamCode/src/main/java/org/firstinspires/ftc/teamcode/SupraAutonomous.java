@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import android.annotation.SuppressLint;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -37,6 +38,7 @@ public class SupraAutonomous extends LinearOpMode {
     YawPitchRollAngles robotOrientation;
 
     double distancePerRotation = 2.35619449019;
+    double robotLength = 5; //In Meters
     double speed;
     public double currentX, currentY, currentZ;
     double yaw;
@@ -46,7 +48,6 @@ public class SupraAutonomous extends LinearOpMode {
 
     List<int[]> supraCheckpoints = new ArrayList<>();
     int currentCheckPoint = 0;
-
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -57,26 +58,36 @@ public class SupraAutonomous extends LinearOpMode {
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
-
     public void runOpMode() {
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
+
+
+        IMU.Parameters myIMUparameters;
+
+        myIMUparameters = new IMU.Parameters(
+                new RevHubOrientationOnRobot(
+                        RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                        RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
+                )
+        );
+
+        imu.initialize(myIMUparameters);
+
         supraCheckpoints.add(new int[]{0, 0, 0, 0});
-
-        /*forward*/         addCheckpoint(10000, 10000, 10000, 10000);
-        /*backward*/        addCheckpoint(-10000, -10000, -10000, -10000);
-        /*strafe left*/     addCheckpoint(-10000, 10000, 10000, -10000);
-        /*strafe right*/    addCheckpoint(10000, -10000, -10000, 10000);
-        /*forward left*/    addCheckpoint(10000, 0, 0, 10000);
-        /*forward right*/   addCheckpoint(0, 10000, 10000, 0);
-        /*backward left*/   addCheckpoint(-10000, 0, 0, -10000);
-        /*backward right*/  addCheckpoint(0, -10000, -10000, 0);
-        /*turn left*/       addCheckpoint(-10000, 10000, -10000, 10000);
-        /*turn right*/      addCheckpoint(10000, -10000, -10000, 10000);
-
+        addCheckpoint(MovementMode.FORWARD, 10000);
+        addCheckpoint(MovementMode.BACKWARD, 10000);
+        addCheckpoint(MovementMode.STRAFE_LEFT, 10000);
+        addCheckpoint(MovementMode.STRAFE_RIGHT, 10000);
+        addCheckpoint(MovementMode.FORWARD_LEFT, 10000);
+        addCheckpoint(MovementMode.FORWARD_RIGHT, 10000);
+        addCheckpoint(MovementMode.BACKWARD_LEFT, 10000);
+        addCheckpoint(MovementMode.BACKWARD_RIGHT, 10000);
+        addCheckpoint(MovementMode.TURN_LEFT, 10000);
+        addCheckpoint(MovementMode.TURN_RIGHT, 10000);
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
@@ -142,9 +153,10 @@ public class SupraAutonomous extends LinearOpMode {
             speed = frontLeft.getVelocity() * distancePerRotation;
             // Share the CPU
 
-             //detects if the motor has arrived to position
+            //detects if the motor has arrived to position
             if (frontRight.getPower() < 0.1 && frontLeft.getPower() < 0.1 &&
-                    backRight.getPower() < 0.1 && backLeft.getPower() < 0.1) {
+                    backRight.getPower() < 0.1 && backLeft.getPower() < 0.1 &&
+                    currentCheckPoint < supraCheckpoints.size()) {
                 currentCheckPoint += 1;
             }
 
@@ -264,17 +276,90 @@ public class SupraAutonomous extends LinearOpMode {
      * Does all the calculations of the positions for you,
      * so you can just add how much you want the motor to change,
      * not where you want the motor to change to.
-     * @param frontLeft     sets the next position for the front left motor
-     * @param frontRight    sets the next position for the front right motor
-     * @param backLeft      sets the next position for the back left motor
-     * @param backRight     sets the next position for the back right motor
+     * @param mode      sets how the robot moves (forwards, backwards, etc.)
+     * @param amount    sets how much the robot moves
      */
-    private void addCheckpoint(int frontLeft, int frontRight, int backLeft, int backRight) {
+    private void addCheckpoint(MovementMode mode, int amount) {
+        int frontLeft = 0;
+        int frontRight = 0;
+        int backLeft = 0;
+        int backRight = 0;
+
+        double[] backward = {-amount,-amount,-amount,-amount};
+        double[] strafeRight = {amount,amount,-amount,-amount};
+        double[] strafeLeft = {-amount,-amount,amount,amount};
+
         int[] currentCheckpoint = supraCheckpoints.get(supraCheckpoints.size() - 1);
+
+        switch (mode) {
+            case FORWARD:
+                frontLeft = amount;
+                frontRight = amount;
+                backLeft = amount;
+                backRight = amount;
+                break;
+            case BACKWARD:
+                frontLeft = -amount;
+                frontRight = -amount;
+                backLeft = -amount;
+                backRight = -amount;
+                break;
+            case STRAFE_LEFT:
+                frontLeft = -amount;
+                frontRight = amount;
+                backLeft = amount;
+                backRight = -amount;
+                break;
+            case STRAFE_RIGHT:
+                frontLeft = amount;
+                frontRight = -amount;
+                backLeft = -amount;
+                backRight = amount;
+                break;
+            case FORWARD_LEFT:
+                frontLeft = amount;
+                backRight = amount;
+                break;
+            case FORWARD_RIGHT:
+                frontRight = amount;
+                backLeft = amount;
+                break;
+            case BACKWARD_LEFT:
+                frontLeft = -amount;
+                backRight = -amount;
+                break;
+            case BACKWARD_RIGHT:
+                frontRight = -amount;
+                backLeft = -amount;
+                break;
+            case TURN_LEFT:
+                frontLeft = -amount;
+                frontRight = amount;
+                backLeft = -amount;
+                backRight = amount;
+                break;
+            case TURN_RIGHT:
+                frontLeft = amount;
+                frontRight = -amount;
+                backLeft = amount;
+                backRight = -amount;
+                break;
+            default:
+                break;
+        }
+
         supraCheckpoints.add(new int[]{frontLeft + currentCheckpoint[0], frontRight + currentCheckpoint[1],
                 backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
     }
+    private void addRightTurnCheckPoint(double[] currentVelocity) {
+        int[] turnRight = {(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[0])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[1])),(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[2])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[4]))};
+        supraCheckpoints.add(turnRight);
+    }
 
+    private void addForward(int[] distance) {
+        int[] forward = {distance[0], distance[1], distance[2], distance[3]};
+        supraCheckpoints.add(forward);
+    }
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
     }

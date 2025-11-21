@@ -18,10 +18,7 @@ import java.util.List;
 
 @TeleOp(name = "Mecanum drive for Decode 2025-2026", group = "TeleOp")
 public class MecanumDriveForDecode extends LinearOpMode {
-    public DcMotorEx frontLeft = null;
-    public DcMotorEx frontRight = null;
-    public DcMotorEx backLeft = null;
-    public DcMotorEx backRight = null;
+    public DcMotorEx frontLeft, frontRight, backLeft, backRight, arm1, arm2, ejector1, ejector2 = null;
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -42,17 +39,29 @@ public class MecanumDriveForDecode extends LinearOpMode {
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+        arm1 = hardwareMap.get(DcMotorEx.class, "arm1");
+        arm2 = hardwareMap.get(DcMotorEx.class, "arm2");
+        ejector1 = hardwareMap.get(DcMotorEx.class, "ejector1");
+        ejector2 = hardwareMap.get(DcMotorEx.class, "ejector2");
         // Reverse the right side motors for proper direction
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        arm1.setDirection(DcMotorSimple.Direction.FORWARD);
+        arm2.setDirection(DcMotorSimple.Direction.FORWARD);
+        ejector1.setDirection(DcMotorSimple.Direction.FORWARD);
+        ejector2.setDirection(DcMotorSimple.Direction.FORWARD);
 
         // Set motors to run without encoders
         frontLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         frontRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        arm1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        arm2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        ejector1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        ejector2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         waitForStart();
 
 
@@ -93,6 +102,14 @@ public class MecanumDriveForDecode extends LinearOpMode {
                 backRight.setPower(backRightPower);
             }
 
+            //arm control
+            double armPower = gamepad2.left_stick_y;
+            double ejectorPower = gamepad2.right_stick_y;
+
+            arm1.setPower(armPower);
+            arm2.setPower(armPower);
+            ejector1.setPower(ejectorPower);
+            ejector2.setPower(ejectorPower);
         }
     }
 
