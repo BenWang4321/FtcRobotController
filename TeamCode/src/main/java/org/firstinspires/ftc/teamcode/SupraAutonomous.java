@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import android.annotation.SuppressLint;
 
 import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -13,7 +14,10 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -30,20 +34,32 @@ public class SupraAutonomous extends LinearOpMode {
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
+
+    double gravity = 9.807;
+    double ballHeightAtLauncher = 2;
+    double ballWeight = 2;
+    double launchAngle = 45;
+    double requiredLaunchHeight = 1;
+
     DcMotor ejector1, ejector2 = null;
     IMU imu;
 
-    IMU.Parameters myIMUparameters;
     YawPitchRollAngles robotOrientation;
+
+    IMU.Parameters myIMUparameters;
+    Orientation myRobotOrientation;
 
     double distancePerRotation = 2.35619449019;
     double speed;
-    public double currentX, currentY, currentZ;
-    double yaw;
-    double pitch;
-    double roll;
-    double velocity;
-
+    int preciseVelocity = 1000;
+    int maxVelocity = 3000;
+    int[] velocity = {0,0,0,0};
+    double[] currentPosition = {0,0,0,0,0,0};
+    double robotLength = 5; //cm
+    double robotWidth = 5; //cm
+    List<double[]> wheelDistFromRobot = new ArrayList<>();
+    double[] robotDistFromCamera = {1,1,1};
+    List<double[]> currentWheelPosition = new ArrayList<>();
     List<int[]> supraCheckpoints = new ArrayList<>();
     int currentCheckPoint = 0;
 
@@ -64,7 +80,15 @@ public class SupraAutonomous extends LinearOpMode {
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
-        supraCheckpoints.add(new int[]{0, 0, 0, 0});
+        myIMUparameters = new IMU.Parameters(
+                new RevHubOrientationOnRobot(
+                        RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                        RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
+                )
+        );
+
+        imu.initialize(myIMUparameters);
+        supraCheckpoints.add(new int[]{0, 0, 0});
 
         /*forward*/         addCheckpoint(10000, 10000, 10000, 10000);
         /*backward*/        addCheckpoint(-10000, -10000, -10000, -10000);
@@ -80,6 +104,15 @@ public class SupraAutonomous extends LinearOpMode {
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
+
+        wheelDistFromRobot.add(new double[]{1,1,1});
+        wheelDistFromRobot.add(new double[]{1,1,1});
+        wheelDistFromRobot.add(new double[]{1,1,1});
+        wheelDistFromRobot.add(new double[]{1,1,1});
+        currentWheelPosition.add(wheelDistFromRobot.get(0));
+        currentWheelPosition.add(wheelDistFromRobot.get(1));
+        currentWheelPosition.add(wheelDistFromRobot.get(2));
+        currentWheelPosition.add(wheelDistFromRobot.get(3));
 
         initAprilTag();
 
@@ -100,8 +133,19 @@ public class SupraAutonomous extends LinearOpMode {
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        
+
         while (opModeIsActive()) {
+
+            myRobotOrientation = imu.getRobotOrientation(
+                    AxesReference.INTRINSIC,
+                    AxesOrder.XYZ,
+                    AngleUnit.DEGREES
+            );
+
+// Then read or display the desired values (Java type float):
+            float X_axis = myRobotOrientation.firstAngle;
+            float Y_axis = myRobotOrientation.secondAngle;
+            float Z_axis = myRobotOrientation.thirdAngle;
             for (AprilTagDetection detection : aprilTag.getDetections()) {
                 switch (detection.id) {
                     case 21:
@@ -124,21 +168,7 @@ public class SupraAutonomous extends LinearOpMode {
                 }
             }
 
-            frontLeft.setPower(1);
-            frontRight.setPower(1);
-            backLeft.setPower(1);
-            backRight.setPower(1);
-
-            frontLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[0]);
-            frontRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[1]);
-            backLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[2]);
-            backRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[3]);
-
-            frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-            backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
+            initiateCheckpoint();
             speed = frontLeft.getVelocity() * distancePerRotation;
             // Share the CPU
 
@@ -234,7 +264,7 @@ public class SupraAutonomous extends LinearOpMode {
      * Add telemetry about AprilTag detections.
      */
     @SuppressLint("DefaultLocale")
-    private void telemetryAprilTag() {
+    private ArrayList<AprilTagDetection> telemetryAprilTag() {
 
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
         telemetry.addData("# AprilTags Detected", currentDetections.size());
@@ -243,9 +273,9 @@ public class SupraAutonomous extends LinearOpMode {
         for (AprilTagDetection detection : currentDetections) {
             if (detection.metadata != null) {
                 telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
+                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (cm)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
                 telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
+                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (cm, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
             } else {
                 telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
                 telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
@@ -257,6 +287,8 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
+
+        return aprilTag.getDetections();
     }   // end method telemetryAprilTag()
 
     /**
@@ -275,11 +307,94 @@ public class SupraAutonomous extends LinearOpMode {
                 backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
     }
 
-    private double calculateLaunchPower(double angle, double distance) {
-        return 0; //just a placeholder
+    private double calculateLaunchPower(double distFromGoal) {
+        MathExtended math = new MathExtended();
+        return Math.sqrt((gravity * distFromGoal) / 2 * (Math.pow(Math.cos(launchAngle), 2) * (ballHeightAtLauncher + distFromGoal * Math.tan(launchAngle) + 1))); //just a placeholder
     }
     private double[] calculateRobotPosition() {
+        ArrayList<AprilTagDetection> aprilTagDistance = telemetryAprilTag();
+        double distX = 0;
+        double distY = 0;
+        double distZ = 0;
+        for (AprilTagDetection detection : aprilTagDistance) {
+            if (detection.metadata != null) {
+                distX = detection.ftcPose.x;
+                distY = detection.ftcPose.y;
+                distZ = detection.ftcPose.z;
+            }
+        }
+
+        currentPosition = new double[]{distX + robotDistFromCamera[0], distY + robotDistFromCamera[1], distZ + robotDistFromCamera[2]};
         return new double[]{};
     }
 
+    private void moveMotors(int frontRightAmount, int frontLeftAmount, int backRightAmount, int backLeftAmount) {
+        frontRight.setTargetPosition(frontRightAmount);
+        frontLeft.setTargetPosition(frontLeftAmount);
+        backRight.setTargetPosition(backRightAmount);
+        backLeft.setTargetPosition(backLeftAmount);
+        frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontRight.setVelocity(maxVelocity);
+        frontLeft.setVelocity(maxVelocity);
+        backRight.setVelocity(maxVelocity);
+        backLeft.setVelocity(maxVelocity);
+    }
+    private void turnRobot(double angle) {
+        moveMotors((int) (robotLength + robotWidth / (2 * angle / 360)), (int) (robotLength + robotWidth / (2 * angle / 360)), (int) (robotLength - robotWidth / (2 * angle / 360)), (int) (robotLength - robotWidth / (2 * angle / 360)));
+    }
+    private void convertPositionToMovement() {
+        moveMotors(((int)Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))), ((int) Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))), ((int) Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))), ((int)Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))));
+    }
+
+    private void calcVelocity() {
+        velocity[0] = (int) frontRight.getVelocity();
+        velocity[1] = (int) frontLeft.getVelocity();
+        velocity[2] = (int) backRight.getVelocity();
+        velocity[3] = (int) backLeft.getVelocity();
+    }
+    private boolean preciseVelocity(double firstValue, double secondValue, double thirdValue) {
+        boolean isntAtPos = true;
+        for (int i = 0; i<=2; i++) {
+            if (firstValue <= 0.1 * secondValue) {
+                frontRight.setVelocity(preciseVelocity);
+                frontLeft.setVelocity(preciseVelocity);
+                backRight.setVelocity(preciseVelocity);
+                backLeft.setVelocity(preciseVelocity);
+            }
+            if (firstValue <= 0.02 * secondValue) {
+                isntAtPos = false;
+            }
+        }
+        return isntAtPos;
+    }
+    private void initiateCheckpoint() {
+        convertPositionToMovement();
+        boolean isntAtPos = true;
+        double angle = (Math.acos((supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0]) / (supraCheckpoints.get(currentCheckPoint)[1] - currentPosition[1])) - currentPosition[3]);
+        turnRobot(angle - currentPosition[3]);
+        while (isntAtPos) {
+            calcVelocity();
+            myRobotOrientation = imu.getRobotOrientation(
+                    AxesReference.INTRINSIC,
+                    AxesOrder.XYZ,
+                    AngleUnit.DEGREES
+            );
+            isntAtPos = preciseVelocity(angle - myRobotOrientation.firstAngle, 0.1, 0.02);
+            }
+        isntAtPos = true;
+        convertPositionToMovement();
+        while (isntAtPos) {
+            calcVelocity();
+            double[] position = calculateRobotPosition();
+            for (int i = 0; i<=2; i++) {
+                if (supraCheckpoints.get(currentCheckPoint)[0] - position[0] <= 0.02 * velocity[i]) {
+                    isntAtPos = false;
+                }
+            }
+        }
+        currentCheckPoint++;
+    }
 }
