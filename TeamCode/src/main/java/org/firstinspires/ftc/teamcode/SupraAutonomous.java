@@ -14,10 +14,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -34,35 +31,23 @@ public class SupraAutonomous extends LinearOpMode {
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
-
-    double gravity = 9.807;
-    double ballHeightAtLauncher = 2;
-    double ballWeight = 2;
-    double launchAngle = 45;
-    double requiredLaunchHeight = 1;
-
     DcMotor ejector1, ejector2 = null;
     IMU imu;
 
+    IMU.Parameters myIMUparameters;
     YawPitchRollAngles robotOrientation;
 
-    IMU.Parameters myIMUparameters;
-    Orientation myRobotOrientation;
-
     double distancePerRotation = 2.35619449019;
+    double robotLength = 5; //In Meters
     double speed;
-    int preciseVelocity = 1000;
-    int maxVelocity = 3000;
-    int[] velocity = {0,0,0,0};
-    double[] currentPosition = {0,0,0,0,0,0};
-    double robotLength = 5; //cm
-    double robotWidth = 5; //cm
-    List<double[]> wheelDistFromRobot = new ArrayList<>();
-    double[] robotDistFromCamera = {1,1,1};
-    List<double[]> currentWheelPosition = new ArrayList<>();
+    public double currentX, currentY, currentZ;
+    double yaw;
+    double pitch;
+    double roll;
+    double velocity;
+
     List<int[]> supraCheckpoints = new ArrayList<>();
     int currentCheckPoint = 0;
-
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -73,12 +58,15 @@ public class SupraAutonomous extends LinearOpMode {
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
-
     public void runOpMode() {
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+
+
+
+        IMU.Parameters myIMUparameters;
 
         myIMUparameters = new IMU.Parameters(
                 new RevHubOrientationOnRobot(
@@ -88,31 +76,21 @@ public class SupraAutonomous extends LinearOpMode {
         );
 
         imu.initialize(myIMUparameters);
-        supraCheckpoints.add(new int[]{0, 0, 0});
 
-        /*forward*/         addCheckpoint(10000, 10000, 10000, 10000);
-        /*backward*/        addCheckpoint(-10000, -10000, -10000, -10000);
-        /*strafe left*/     addCheckpoint(-10000, 10000, 10000, -10000);
-        /*strafe right*/    addCheckpoint(10000, -10000, -10000, 10000);
-        /*forward left*/    addCheckpoint(10000, 0, 0, 10000);
-        /*forward right*/   addCheckpoint(0, 10000, 10000, 0);
-        /*backward left*/   addCheckpoint(-10000, 0, 0, -10000);
-        /*backward right*/  addCheckpoint(0, -10000, -10000, 0);
-        /*turn left*/       addCheckpoint(-10000, 10000, -10000, 10000);
-        /*turn right*/      addCheckpoint(10000, -10000, -10000, 10000);
-
+        supraCheckpoints.add(new int[]{0, 0, 0, 0});
+        addCheckpoint(MovementMode.FORWARD, 10000);
+        addCheckpoint(MovementMode.BACKWARD, 10000);
+        addCheckpoint(MovementMode.STRAFE_LEFT, 10000);
+        addCheckpoint(MovementMode.STRAFE_RIGHT, 10000);
+        addCheckpoint(MovementMode.FORWARD_LEFT, 10000);
+        addCheckpoint(MovementMode.FORWARD_RIGHT, 10000);
+        addCheckpoint(MovementMode.BACKWARD_LEFT, 10000);
+        addCheckpoint(MovementMode.BACKWARD_RIGHT, 10000);
+        addCheckpoint(MovementMode.TURN_LEFT, 10000);
+        addCheckpoint(MovementMode.TURN_RIGHT, 10000);
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
-
-        wheelDistFromRobot.add(new double[]{1,1,1});
-        wheelDistFromRobot.add(new double[]{1,1,1});
-        wheelDistFromRobot.add(new double[]{1,1,1});
-        wheelDistFromRobot.add(new double[]{1,1,1});
-        currentWheelPosition.add(wheelDistFromRobot.get(0));
-        currentWheelPosition.add(wheelDistFromRobot.get(1));
-        currentWheelPosition.add(wheelDistFromRobot.get(2));
-        currentWheelPosition.add(wheelDistFromRobot.get(3));
 
         initAprilTag();
 
@@ -133,19 +111,8 @@ public class SupraAutonomous extends LinearOpMode {
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
-
+        
         while (opModeIsActive()) {
-
-            myRobotOrientation = imu.getRobotOrientation(
-                    AxesReference.INTRINSIC,
-                    AxesOrder.XYZ,
-                    AngleUnit.DEGREES
-            );
-
-// Then read or display the desired values (Java type float):
-            float X_axis = myRobotOrientation.firstAngle;
-            float Y_axis = myRobotOrientation.secondAngle;
-            float Z_axis = myRobotOrientation.thirdAngle;
             for (AprilTagDetection detection : aprilTag.getDetections()) {
                 switch (detection.id) {
                     case 21:
@@ -168,13 +135,28 @@ public class SupraAutonomous extends LinearOpMode {
                 }
             }
 
-            initiateCheckpoint();
+            frontLeft.setPower(1);
+            frontRight.setPower(1);
+            backLeft.setPower(1);
+            backRight.setPower(1);
+
+            frontLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[0]);
+            frontRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[1]);
+            backLeft.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[2]);
+            backRight.setTargetPosition(supraCheckpoints.get(currentCheckPoint)[3]);
+
+            frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
             speed = frontLeft.getVelocity() * distancePerRotation;
             // Share the CPU
 
-             //detects if the motor has arrived to position
+            //detects if the motor has arrived to position
             if (frontRight.getPower() < 0.1 && frontLeft.getPower() < 0.1 &&
-                    backRight.getPower() < 0.1 && backLeft.getPower() < 0.1) {
+                    backRight.getPower() < 0.1 && backLeft.getPower() < 0.1 &&
+                    currentCheckPoint < supraCheckpoints.size()) {
                 currentCheckPoint += 1;
             }
 
@@ -264,7 +246,7 @@ public class SupraAutonomous extends LinearOpMode {
      * Add telemetry about AprilTag detections.
      */
     @SuppressLint("DefaultLocale")
-    private ArrayList<AprilTagDetection> telemetryAprilTag() {
+    private void telemetryAprilTag() {
 
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
         telemetry.addData("# AprilTags Detected", currentDetections.size());
@@ -273,9 +255,9 @@ public class SupraAutonomous extends LinearOpMode {
         for (AprilTagDetection detection : currentDetections) {
             if (detection.metadata != null) {
                 telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (cm)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
+                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
                 telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (cm, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
+                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
             } else {
                 telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
                 telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
@@ -287,8 +269,6 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
-
-        return aprilTag.getDetections();
     }   // end method telemetryAprilTag()
 
     /**
@@ -296,105 +276,95 @@ public class SupraAutonomous extends LinearOpMode {
      * Does all the calculations of the positions for you,
      * so you can just add how much you want the motor to change,
      * not where you want the motor to change to.
-     * @param frontLeft     sets the next position for the front left motor
-     * @param frontRight    sets the next position for the front right motor
-     * @param backLeft      sets the next position for the back left motor
-     * @param backRight     sets the next position for the back right motor
+     * @param mode      sets how the robot moves (forwards, backwards, etc.)
+     * @param amount    sets how much the robot moves
      */
-    private void addCheckpoint(int frontLeft, int frontRight, int backLeft, int backRight) {
+    private void addCheckpoint(MovementMode mode, int amount) {
+        int frontLeft = 0;
+        int frontRight = 0;
+        int backLeft = 0;
+        int backRight = 0;
+
+        double[] backward = {-amount,-amount,-amount,-amount};
+        double[] strafeRight = {amount,amount,-amount,-amount};
+        double[] strafeLeft = {-amount,-amount,amount,amount};
+
         int[] currentCheckpoint = supraCheckpoints.get(supraCheckpoints.size() - 1);
+
+        switch (mode) {
+            case FORWARD:
+                frontLeft = amount;
+                frontRight = amount;
+                backLeft = amount;
+                backRight = amount;
+                break;
+            case BACKWARD:
+                frontLeft = -amount;
+                frontRight = -amount;
+                backLeft = -amount;
+                backRight = -amount;
+                break;
+            case STRAFE_LEFT:
+                frontLeft = -amount;
+                frontRight = amount;
+                backLeft = amount;
+                backRight = -amount;
+                break;
+            case STRAFE_RIGHT:
+                frontLeft = amount;
+                frontRight = -amount;
+                backLeft = -amount;
+                backRight = amount;
+                break;
+            case FORWARD_LEFT:
+                frontLeft = amount;
+                backRight = amount;
+                break;
+            case FORWARD_RIGHT:
+                frontRight = amount;
+                backLeft = amount;
+                break;
+            case BACKWARD_LEFT:
+                frontLeft = -amount;
+                backRight = -amount;
+                break;
+            case BACKWARD_RIGHT:
+                frontRight = -amount;
+                backLeft = -amount;
+                break;
+            case TURN_LEFT:
+                frontLeft = -amount;
+                frontRight = amount;
+                backLeft = -amount;
+                backRight = amount;
+                break;
+            case TURN_RIGHT:
+                frontLeft = amount;
+                frontRight = -amount;
+                backLeft = amount;
+                backRight = -amount;
+                break;
+            default:
+                break;
+        }
+
         supraCheckpoints.add(new int[]{frontLeft + currentCheckpoint[0], frontRight + currentCheckpoint[1],
                 backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
     }
+    private void addRightTurnCheckPoint(double[] currentVelocity) {
+        int[] turnRight = {(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[0])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[1])),(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[2])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[4]))};
+        supraCheckpoints.add(turnRight);
+    }
 
-    private double calculateLaunchPower(double distFromGoal) {
-        MathExtended math = new MathExtended();
-        return Math.sqrt((gravity * distFromGoal) / 2 * (Math.pow(Math.cos(launchAngle), 2) * (ballHeightAtLauncher + distFromGoal * Math.tan(launchAngle) + 1))); //just a placeholder
+    private void addForward(int[] distance) {
+        int[] forward = {distance[0], distance[1], distance[2], distance[3]};
+        supraCheckpoints.add(forward);
+    }
+    private double calculateLaunchPower(double angle, double distance) {
+        return 0; //just a placeholder
     }
     private double[] calculateRobotPosition() {
-        ArrayList<AprilTagDetection> aprilTagDistance = telemetryAprilTag();
-        double distX = 0;
-        double distY = 0;
-        double distZ = 0;
-        for (AprilTagDetection detection : aprilTagDistance) {
-            if (detection.metadata != null) {
-                distX = detection.ftcPose.x;
-                distY = detection.ftcPose.y;
-                distZ = detection.ftcPose.z;
-            }
-        }
-
-        currentPosition = new double[]{distX + robotDistFromCamera[0], distY + robotDistFromCamera[1], distZ + robotDistFromCamera[2]};
         return new double[]{};
     }
 
-    private void moveMotors(int frontRightAmount, int frontLeftAmount, int backRightAmount, int backLeftAmount) {
-        frontRight.setTargetPosition(frontRightAmount);
-        frontLeft.setTargetPosition(frontLeftAmount);
-        backRight.setTargetPosition(backRightAmount);
-        backLeft.setTargetPosition(backLeftAmount);
-        frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        frontRight.setVelocity(maxVelocity);
-        frontLeft.setVelocity(maxVelocity);
-        backRight.setVelocity(maxVelocity);
-        backLeft.setVelocity(maxVelocity);
-    }
-    private void turnRobot(double angle) {
-        moveMotors((int) (robotLength + robotWidth / (2 * angle / 360)), (int) (robotLength + robotWidth / (2 * angle / 360)), (int) (robotLength - robotWidth / (2 * angle / 360)), (int) (robotLength - robotWidth / (2 * angle / 360)));
-    }
-    private void convertPositionToMovement() {
-        moveMotors(((int)Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))), ((int) Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))), ((int) Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))), ((int)Math.round(Math.sqrt(Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2) + Math.pow(supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0], 2)))));
-    }
-
-    private void calcVelocity() {
-        velocity[0] = (int) frontRight.getVelocity();
-        velocity[1] = (int) frontLeft.getVelocity();
-        velocity[2] = (int) backRight.getVelocity();
-        velocity[3] = (int) backLeft.getVelocity();
-    }
-    private boolean preciseVelocity(double firstValue, double secondValue, double thirdValue) {
-        boolean isntAtPos = true;
-        for (int i = 0; i<=2; i++) {
-            if (firstValue <= 0.1 * secondValue) {
-                frontRight.setVelocity(preciseVelocity);
-                frontLeft.setVelocity(preciseVelocity);
-                backRight.setVelocity(preciseVelocity);
-                backLeft.setVelocity(preciseVelocity);
-            }
-            if (firstValue <= 0.02 * secondValue) {
-                isntAtPos = false;
-            }
-        }
-        return isntAtPos;
-    }
-    private void initiateCheckpoint() {
-        convertPositionToMovement();
-        boolean isntAtPos = true;
-        double angle = (Math.acos((supraCheckpoints.get(currentCheckPoint)[0] - currentPosition[0]) / (supraCheckpoints.get(currentCheckPoint)[1] - currentPosition[1])) - currentPosition[3]);
-        turnRobot(angle - currentPosition[3]);
-        while (isntAtPos) {
-            calcVelocity();
-            myRobotOrientation = imu.getRobotOrientation(
-                    AxesReference.INTRINSIC,
-                    AxesOrder.XYZ,
-                    AngleUnit.DEGREES
-            );
-            isntAtPos = preciseVelocity(angle - myRobotOrientation.firstAngle, 0.1, 0.02);
-            }
-        isntAtPos = true;
-        convertPositionToMovement();
-        while (isntAtPos) {
-            calcVelocity();
-            double[] position = calculateRobotPosition();
-            for (int i = 0; i<=2; i++) {
-                if (supraCheckpoints.get(currentCheckPoint)[0] - position[0] <= 0.02 * velocity[i]) {
-                    isntAtPos = false;
-                }
-            }
-        }
-        currentCheckPoint++;
-    }
 }
