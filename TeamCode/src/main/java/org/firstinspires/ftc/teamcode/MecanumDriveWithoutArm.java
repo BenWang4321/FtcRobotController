@@ -6,15 +6,10 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-
 @TeleOp(name = "Mecanum Drive without arm", group = "TeleOp")
 public class MecanumDriveWithoutArm extends LinearOpMode {
 
-
-    public DcMotor frontLeft = null;
-    public DcMotor frontRight = null;
-    public DcMotor backLeft = null;
-    public DcMotor backRight = null;
+    public DcMotor frontLeft, frontRight, backLeft, backRight = null;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -29,22 +24,19 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
 
-
         // Set motors to run without encoders
         frontLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         frontRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backLeft.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         backRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-
         waitForStart();
-
 
         while (opModeIsActive()) {
             // Get joystick values
-            double fb = -gamepad1.left_stick_x * 0.7; // Scale for smoother control
-            double strafe = -gamepad1.left_stick_y * 0.7; // Scale strafing
-            double turn = gamepad1.right_stick_x * 0.6;
+            double fb = -gamepad1.left_stick_x; // Scale for smoother control
+            double strafe = -gamepad1.left_stick_y; // Scale strafing
+            double turn = gamepad1.right_stick_x;
 
             //fb & turn: fr, fl inverted
             //strafe: fr, bl inverted
@@ -64,7 +56,6 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
             max = Math.max(max, Math.abs(backRightPower));
             max = Math.max(max, Math.abs(frontRightPower));
 
-
             if (max > 1) {
                 frontLeft.setPower(frontLeftPower / max);
                 frontRight.setPower(frontRightPower / max);
@@ -76,6 +67,15 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
                 backLeft.setPower(backLeftPower);
                 backRight.setPower(backRightPower);
             }
+
+            telemetry.addData("forward/backward power", fb);
+            telemetry.addData("strafe power", strafe);
+            telemetry.addData("turn power", turn);
+            telemetry.addData("front left power", frontLeftPower);
+            telemetry.addData("front right power", frontRightPower);
+            telemetry.addData("back left power", backLeftPower);
+            telemetry.addData("back right power", backRightPower);
+            telemetry.update();
         }
     }
 }

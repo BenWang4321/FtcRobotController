@@ -108,6 +108,13 @@ public class MecanumDriveForDecode extends LinearOpMode {
             arm2.setTargetPosition(Math.min((int) Math.round(armPosition), 1000));
 
             telemetry.addData("arm position", armPosition);
+            telemetry.addData("forward/backward power", fb);
+            telemetry.addData("strafe power", strafe);
+            telemetry.addData("turn power", turn);
+            telemetry.addData("front left power", frontLeftPower);
+            telemetry.addData("front right power", frontRightPower);
+            telemetry.addData("back left power", backLeftPower);
+            telemetry.addData("back right power", backRightPower);
             telemetry.update();
         }
     }
