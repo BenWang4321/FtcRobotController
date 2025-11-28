@@ -32,14 +32,14 @@ public class JustArm extends LinearOpMode {
             ejector2.setPower(eject);
 
             if (gamepad2.a) {
-                servo1.setPower(1);
+                servo1.setPower(0.7);
 
             } else {
                 servo2.setPower(0);
             }
 
             if (gamepad2.b) {
-                servo1.setPower(-1);
+                servo1.setPower(-0.7);
             } else {
                 servo1.setPower(0);
             }
