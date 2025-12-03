@@ -29,6 +29,7 @@ import java.util.List;
 public class SupraAutonomous extends LinearOpMode {
 
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
+
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
     DcMotor ejector1, ejector2 = null;
@@ -37,8 +38,8 @@ public class SupraAutonomous extends LinearOpMode {
     IMU.Parameters myIMUparameters;
     YawPitchRollAngles robotOrientation;
 
-    double distancePerRotation = 2.35619449019;
-    double robotLength = 5; //In Meters
+    double DISTANCE_PER_ROTATION = 23.5619449019;
+    double ROBOT_LENGTH = 38; //In cm
     double speed;
     public double currentX, currentY, currentZ;
     double yaw;
@@ -47,6 +48,7 @@ public class SupraAutonomous extends LinearOpMode {
     double velocity;
 
     List<int[]> supraCheckpoints = new ArrayList<>();
+    int[] currentPosition = new int[4];
     int currentCheckPoint = 0;
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -58,6 +60,7 @@ public class SupraAutonomous extends LinearOpMode {
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
+
     public void runOpMode() {
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
@@ -150,7 +153,7 @@ public class SupraAutonomous extends LinearOpMode {
             backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-            speed = frontLeft.getVelocity() * distancePerRotation;
+            speed = frontLeft.getVelocity() * DISTANCE_PER_ROTATION;
             // Share the CPU
 
             //detects if the motor has arrived to position
@@ -285,6 +288,15 @@ public class SupraAutonomous extends LinearOpMode {
         int backLeft = 0;
         int backRight = 0;
 
+        double angleToTurn = 0;
+        boolean atAngle = false;
+        while (!atAngle) {
+            YawPitchRollAngles currentAngle = imu.getRobotYawPitchRollAngles();
+            if (currentAngle.getYaw(AngleUnit.DEGREES) == angleToTurn) {
+                atAngle = true;
+            }
+        }
+
         double[] backward = {-amount,-amount,-amount,-amount};
         double[] strafeRight = {amount,amount,-amount,-amount};
         double[] strafeLeft = {-amount,-amount,amount,amount};
@@ -352,7 +364,7 @@ public class SupraAutonomous extends LinearOpMode {
                 backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
     }
     private void addRightTurnCheckPoint(double[] currentVelocity) {
-        int[] turnRight = {(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[0])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[1])),(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[2])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[4]))};
+        int[] turnRight = {(int) Math.floor(ROBOT_LENGTH / 2 * (DISTANCE_PER_ROTATION * currentVelocity[0])),(int) -Math.floor(ROBOT_LENGTH / 2 * (DISTANCE_PER_ROTATION * currentVelocity[1])),(int) Math.floor(ROBOT_LENGTH / 2 * (DISTANCE_PER_ROTATION * currentVelocity[2])),(int) -Math.floor(ROBOT_LENGTH / 2 * (DISTANCE_PER_ROTATION * currentVelocity[4]))};
         supraCheckpoints.add(turnRight);
     }
 
@@ -360,11 +372,28 @@ public class SupraAutonomous extends LinearOpMode {
         int[] forward = {distance[0], distance[1], distance[2], distance[3]};
         supraCheckpoints.add(forward);
     }
+
+    private void driveToAprilTag(AprilTagDetection tag, double abortDistance) {
+        if (tag.metadata != null) {
+            double distance = abortDistance - tag.ftcPose.range;
+
+            addCheckpoint(MovementMode.FORWARD, (int) Math.round(distance * DISTANCE_PER_ROTATION));
+        }
+    }
+
+    private void turnToAprilTag(AprilTagDetection tag, double abortAngle) {
+        if (tag.metadata != null) {
+            double angle = abortAngle - tag.ftcPose.bearing;
+            addCheckpoint(MovementMode.TURN_LEFT, (int) Math.round(angle * DISTANCE_PER_ROTATION /
+                    new MathExtended().calculateDiagonal(new double[]{ROBOT_LENGTH, ROBOT_LENGTH})));
+        }
+    }
+
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
     }
+
     private double[] calculateRobotPosition() {
         return new double[]{};
     }
-
 }
