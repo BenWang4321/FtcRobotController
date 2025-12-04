@@ -32,19 +32,4 @@ public class MathExtended {
     public double logN(double number, double base) {
         return Math.log(number)/Math.log(base);
     }
-
-    /**
-     * Finds the longest diagonal in an n-th dimensional cube.
-     * @param lengths each item represents the length of a side of the cube.
-     * @return the length of the longest diagonal in the cube.
-     */
-    public double calculateDiagonal(double[] lengths) {
-        double holder = 0;
-
-        for (double length : lengths) {
-            holder += Math.pow(length, 2);
-        }
-
-        return Math.sqrt(holder);
-    }
 }
