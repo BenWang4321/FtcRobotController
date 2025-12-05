@@ -37,8 +37,8 @@ public class SupraAutonomous extends LinearOpMode {
     IMU.Parameters myIMUparameters;
     int positionTolerance = 10;
     int precisionPositionTolerance = 50;
-    double distancePerRotation = 2.35619449019;
-    double robotLength = 5; //In Centimeters
+    double DISTANCE_PER_ROTATION = 23.5619449019;
+    double ROBOT_LENGTH = 38; //In Centimeters
     double speed;
     List<int[]> checkPoints = new ArrayList<>();
     int[] currentPosition = new int[4];
@@ -147,7 +147,7 @@ public class SupraAutonomous extends LinearOpMode {
             backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-            speed = frontLeft.getVelocity() * distancePerRotation;
+            speed = frontLeft.getVelocity() * DISTANCE_PER_ROTATION;
             // Share the CPU
 
             //detects if the motor has arrived to position
@@ -282,7 +282,7 @@ public class SupraAutonomous extends LinearOpMode {
         int[] objective = checkPoints.get(currentCheckPoint);
         double orientationObjective;
         if (objective[3] - currentRotation[0] == 0) {
-            orientationObjective = (objective[4] - currentRotation[0]) / (2 * maxVelocity * distancePerRotation) / 360;
+            orientationObjective = (objective[4] - currentRotation[0]) / (2 * maxVelocity * DISTANCE_PER_ROTATION) / 360;
         } else {
             orientationObjective = objective[3];
         }
@@ -323,6 +323,19 @@ public class SupraAutonomous extends LinearOpMode {
             }
         }
     }
+
+    private void driveToAprilTag(AprilTagDetection tag, double abortDistance) {
+        if (tag.metadata != null) {
+            double distance = abortDistance - tag.ftcPose.range;
+        }
+    }
+
+    private void turnToAprilTag(AprilTagDetection tag, double abortAngle) {
+        if (tag.metadata != null) {
+            double angle = abortAngle - tag.ftcPose.bearing;
+        }
+    }
+
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
     }
