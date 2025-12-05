@@ -29,25 +29,29 @@ import java.util.List;
 public class SupraAutonomous extends LinearOpMode {
 
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
+    DcMotorEx[] motorGroup = {frontRight, frontLeft, backRight, backLeft};
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
     DcMotor ejector1, ejector2 = null;
     IMU imu;
-
     IMU.Parameters myIMUparameters;
-    YawPitchRollAngles robotOrientation;
-
+    int positionTolerance = 10;
+    int precisionPositionTolerance = 50;
     double distancePerRotation = 2.35619449019;
-    double robotLength = 5; //In Meters
+    double robotLength = 5; //In Centimeters
     double speed;
-    public double currentX, currentY, currentZ;
-    double yaw;
-    double pitch;
-    double roll;
-    double velocity;
-
-    List<int[]> supraCheckpoints = new ArrayList<>();
+    List<int[]> checkPoints = new ArrayList<>();
+    int[] currentPosition = new int[4];
+    int[] currentRotation = new int[1];
+    double[] motorDistancesFromRobot = {1,1,1,1};
     int currentCheckPoint = 0;
+    int maxVelocity = 3000;
+    int preciseVelocity = 1000;
+
+    public enum runMode {
+
+    }
+    List<int[]> supraCheckpoints = new ArrayList<>();
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -59,13 +63,16 @@ public class SupraAutonomous extends LinearOpMode {
      */
     private VisionPortal visionPortal;
     public void runOpMode() {
+
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
 
-
-
+        frontLeft.setTargetPositionTolerance(positionTolerance);
+        backLeft.setTargetPositionTolerance(positionTolerance);
+        frontRight.setTargetPositionTolerance(positionTolerance);
+        backRight.setTargetPositionTolerance(positionTolerance);
         IMU.Parameters myIMUparameters;
 
         myIMUparameters = new IMU.Parameters(
@@ -77,17 +84,7 @@ public class SupraAutonomous extends LinearOpMode {
 
         imu.initialize(myIMUparameters);
 
-        supraCheckpoints.add(new int[]{0, 0, 0, 0});
-        addCheckpoint(MovementMode.FORWARD, 10000);
-        addCheckpoint(MovementMode.BACKWARD, 10000);
-        addCheckpoint(MovementMode.STRAFE_LEFT, 10000);
-        addCheckpoint(MovementMode.STRAFE_RIGHT, 10000);
-        addCheckpoint(MovementMode.FORWARD_LEFT, 10000);
-        addCheckpoint(MovementMode.FORWARD_RIGHT, 10000);
-        addCheckpoint(MovementMode.BACKWARD_LEFT, 10000);
-        addCheckpoint(MovementMode.BACKWARD_RIGHT, 10000);
-        addCheckpoint(MovementMode.TURN_LEFT, 10000);
-        addCheckpoint(MovementMode.TURN_RIGHT, 10000);
+
 
         char[] ballOrder = new char[3];
         boolean onBlue = true;
@@ -111,7 +108,7 @@ public class SupraAutonomous extends LinearOpMode {
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        
+
         while (opModeIsActive()) {
             for (AprilTagDetection detection : aprilTag.getDetections()) {
                 switch (detection.id) {
@@ -276,89 +273,55 @@ public class SupraAutonomous extends LinearOpMode {
      * Does all the calculations of the positions for you,
      * so you can just add how much you want the motor to change,
      * not where you want the motor to change to.
-     * @param mode      sets how the robot moves (forwards, backwards, etc.)
-     * @param amount    sets how much the robot moves
      */
-    private void addCheckpoint(MovementMode mode, int amount) {
-        int frontLeft = 0;
-        int frontRight = 0;
-        int backLeft = 0;
-        int backRight = 0;
+    private void addCheckpoint() {
+        supraCheckpoints.add(new int[]{0, 0, 0, 0});
+    }
 
-        double[] backward = {-amount,-amount,-amount,-amount};
-        double[] strafeRight = {amount,amount,-amount,-amount};
-        double[] strafeLeft = {-amount,-amount,amount,amount};
-
-        int[] currentCheckpoint = supraCheckpoints.get(supraCheckpoints.size() - 1);
-
-        switch (mode) {
-            case FORWARD:
-                frontLeft = amount;
-                frontRight = amount;
-                backLeft = amount;
-                backRight = amount;
-                break;
-            case BACKWARD:
-                frontLeft = -amount;
-                frontRight = -amount;
-                backLeft = -amount;
-                backRight = -amount;
-                break;
-            case STRAFE_LEFT:
-                frontLeft = -amount;
-                frontRight = amount;
-                backLeft = amount;
-                backRight = -amount;
-                break;
-            case STRAFE_RIGHT:
-                frontLeft = amount;
-                frontRight = -amount;
-                backLeft = -amount;
-                backRight = amount;
-                break;
-            case FORWARD_LEFT:
-                frontLeft = amount;
-                backRight = amount;
-                break;
-            case FORWARD_RIGHT:
-                frontRight = amount;
-                backLeft = amount;
-                break;
-            case BACKWARD_LEFT:
-                frontLeft = -amount;
-                backRight = -amount;
-                break;
-            case BACKWARD_RIGHT:
-                frontRight = -amount;
-                backLeft = -amount;
-                break;
-            case TURN_LEFT:
-                frontLeft = -amount;
-                frontRight = amount;
-                backLeft = -amount;
-                backRight = amount;
-                break;
-            case TURN_RIGHT:
-                frontLeft = amount;
-                frontRight = -amount;
-                backLeft = amount;
-                backRight = -amount;
-                break;
-            default:
-                break;
+    private void executeCheckpoint() {
+        int[] objective = checkPoints.get(currentCheckPoint);
+        double orientationObjective;
+        if (objective[3] - currentRotation[0] == 0) {
+            orientationObjective = (objective[4] - currentRotation[0]) / (2 * maxVelocity * distancePerRotation) / 360;
+        } else {
+            orientationObjective = objective[3];
         }
+        YawPitchRollAngles robotOrientation = imu.getRobotYawPitchRollAngles();
+        robotOrientation.getYaw(AngleUnit.DEGREES);
+        boolean IsAt = false;
 
-        supraCheckpoints.add(new int[]{frontLeft + currentCheckpoint[0], frontRight + currentCheckpoint[1],
-                backLeft + currentCheckpoint[2], backRight + currentCheckpoint[3]});
-    }
-    private void addRightTurnCheckPoint(double[] currentVelocity) {
-        int[] turnRight = {(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[0])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[1])),(int) Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[2])),(int) -Math.floor(robotLength / 2 * (distancePerRotation * currentVelocity[4]))};
-        supraCheckpoints.add(turnRight);
-    }
+        frontLeft.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[0] * 2 * Math.PI)));
+        frontRight.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[1] * 2 * Math.PI)));
+        backLeft.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[2] * 2 * Math.PI)));
+        backRight.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[3] * 2 * Math.PI)));
 
-    private void addForward(int[] distance) {
-        int[] forward = {distance[0], distance[1], distance[2], distance[3]};
-        supraCheckpoints.add(forward);
+        while (!IsAt) {
+            for (DcMotorEx motor : motorGroup) {
+                if (Math.abs(motor.getCurrentPosition() - orientationObjective) < positionTolerance) {
+                    IsAt = true;
+                } else if (Math.abs(motor.getCurrentPosition() - orientationObjective) < precisionPositionTolerance) {
+                    motor.setVelocity(preciseVelocity);
+                } else {
+                    IsAt = false;
+                }
+            }
+        }
+        if (objective[0] == 0 && objective[1] == 0) {
+            int distanceObjective = (int) Math.sqrt(Math.pow(objective[0], 2) + Math.pow(objective[1], 2));
+            IsAt = false;
+
+            while (!IsAt) {
+                for (DcMotorEx motor : motorGroup) {
+                    if (Math.abs(motor.getCurrentPosition() - distanceObjective) < positionTolerance) {
+                        IsAt = true;
+                    } else if (Math.abs(motor.getCurrentPosition() - distanceObjective) < precisionPositionTolerance) {
+                        motor.setVelocity(preciseVelocity);
+                    } else {
+                        IsAt = false;
+                    }
+                }
+            }
+        }
     }
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
