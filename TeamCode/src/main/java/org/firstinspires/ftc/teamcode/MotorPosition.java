@@ -1,10 +1,10 @@
 package org.firstinspires.ftc.teamcode;
 
-public class WheelPosition {
+public class MotorPosition {
 
     private int[] positions;
 
-    public WheelPosition(int[] positions) {
+    public MotorPosition(int[] positions) {
         this.positions = positions;
     }
 
@@ -25,12 +25,12 @@ public class WheelPosition {
         positions = holder;
     }
 
-    public void setPositions(WheelPosition positions) {
+    public void setPositions(MotorPosition positions) {
         this.positions = validatePositions(positions.toArray());
     }
 
-    public WheelPosition getPositions() {
-        return new WheelPosition(positions);
+    public MotorPosition getPositions() {
+        return new MotorPosition(positions);
     }
 
     public int get(int index) {
@@ -45,13 +45,9 @@ public class WheelPosition {
         int[] holder = new int[4];
 
         if (positions.length > 4) {
-            for (int i = 0; i < 4; i++) {
-                holder[i] = positions[i];
-            }
+            System.arraycopy(positions, 0, holder, 0, 4);
         } else if (positions.length < 4) {
-            for (int i = 0; i < positions.length; i++) {
-                holder[i] = positions[i];
-            }
+            System.arraycopy(positions, 0, holder, 0, positions.length);
 
             for (int i = positions.length; i < 4; i++) {
                 holder[i] = 0;
