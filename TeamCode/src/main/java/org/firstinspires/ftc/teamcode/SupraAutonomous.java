@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode;
 
 import android.annotation.SuppressLint;
 
-import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -23,18 +22,17 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
-@Autonomous(name="supra autonomous")
+@Autonomous(name="supra autonomous", group = "autonomous")
 
 public class SupraAutonomous extends LinearOpMode {
 
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
     DcMotorEx[] motorGroup = {frontRight, frontLeft, backRight, backLeft};
-    ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
     DcMotor ejector1, ejector2 = null;
     IMU imu;
-    IMU.Parameters myIMUparameters;
     int positionTolerance = 10;
     int precisionPositionTolerance = 50;
     double DISTANCE_PER_ROTATION = 23.5619449019;
@@ -48,9 +46,6 @@ public class SupraAutonomous extends LinearOpMode {
     int maxVelocity = 3000;
     int preciseVelocity = 1000;
 
-    public enum runMode {
-
-    }
     List<int[]> supraCheckpoints = new ArrayList<>();
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -73,9 +68,7 @@ public class SupraAutonomous extends LinearOpMode {
         backLeft.setTargetPositionTolerance(positionTolerance);
         frontRight.setTargetPositionTolerance(positionTolerance);
         backRight.setTargetPositionTolerance(positionTolerance);
-        IMU.Parameters myIMUparameters;
-
-        myIMUparameters = new IMU.Parameters(
+        IMU.Parameters myIMUparameters = new IMU.Parameters(
                 new RevHubOrientationOnRobot(
                         RevHubOrientationOnRobot.LogoFacingDirection.UP,
                         RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
@@ -83,11 +76,6 @@ public class SupraAutonomous extends LinearOpMode {
         );
 
         imu.initialize(myIMUparameters);
-
-
-
-        char[] ballOrder = new char[3];
-        boolean onBlue = true;
 
         initAprilTag();
 
@@ -110,27 +98,6 @@ public class SupraAutonomous extends LinearOpMode {
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         while (opModeIsActive()) {
-            for (AprilTagDetection detection : aprilTag.getDetections()) {
-                switch (detection.id) {
-                    case 21:
-                        ballOrder[0] = 'G';
-                        ballOrder[1] = 'P';
-                        ballOrder[2] = 'P';
-                        break;
-                    case 22:
-                        ballOrder[0] = 'P';
-                        ballOrder[1] = 'G';
-                        ballOrder[2] = 'P';
-                        break;
-                    case 23:
-                        ballOrder[0] = 'P';
-                        ballOrder[1] = 'P';
-                        ballOrder[2] = 'G';
-                        break;
-                    default:
-                        break;
-                }
-            }
 
             frontLeft.setPower(1);
             frontRight.setPower(1);
@@ -147,7 +114,7 @@ public class SupraAutonomous extends LinearOpMode {
             backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-            speed = frontLeft.getVelocity() * DISTANCE_PER_ROTATION;
+            speed = frontLeft.getVelocity() * DISTANCE_PER_ROTATION / 100;
             // Share the CPU
 
             //detects if the motor has arrived to position
@@ -158,7 +125,7 @@ public class SupraAutonomous extends LinearOpMode {
             }
 
             telemetryAprilTag();
-            telemetry.addData("speed", speed);
+            telemetry.addData("speed (m/s)", speed);
             telemetry.update();
 
         }
@@ -290,10 +257,8 @@ public class SupraAutonomous extends LinearOpMode {
         robotOrientation.getYaw(AngleUnit.DEGREES);
         boolean IsAt = false;
 
-        frontLeft.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[0] * 2 * Math.PI)));
-        frontRight.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[1] * 2 * Math.PI)));
-        backLeft.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[2] * 2 * Math.PI)));
-        backRight.setTargetPosition((int) (orientationObjective * (motorDistancesFromRobot[3] * 2 * Math.PI)));
+        IntStream.range(0, 4).forEachOrdered(i -> motorGroup[i].setTargetPosition((int)
+                Math.round(orientationObjective * (motorDistancesFromRobot[i] * 2 * Math.PI))));
 
         while (!IsAt) {
             for (DcMotorEx motor : motorGroup) {
