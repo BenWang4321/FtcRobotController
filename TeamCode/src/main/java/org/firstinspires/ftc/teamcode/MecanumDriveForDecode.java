@@ -78,6 +78,8 @@ public class MecanumDriveForDecode extends LinearOpMode {
             }
 
             elevator.setPower(gamepad2.left_stick_y);
+            ejector1.setPower(gamepad2.right_stick_y);
+            ejector2.setPower(gamepad2.right_stick_y);
             intake.setPower(1);
 
             telemetry.addData("forward/backward power", fb);
