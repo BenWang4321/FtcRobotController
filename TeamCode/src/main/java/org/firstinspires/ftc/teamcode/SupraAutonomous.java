@@ -2,10 +2,10 @@ package org.firstinspires.ftc.teamcode;
 
 import android.annotation.SuppressLint;
 
+import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -14,7 +14,10 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -23,55 +26,61 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 
-@Autonomous(name="supra autonomous", group = "autonomous")
+@Autonomous(name="supra autonomous")
 
 public class SupraAutonomous extends LinearOpMode {
 
-    DcMotorEx frontLeft, backLeft, backRight, frontRight, ejector1, ejector2 = null;
-    CRServo elevator, intake;
-    DcMotorEx[] motorGroup;
+    DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
+    DcMotorEx[] motorGroup = {frontRight, frontLeft, backRight, backLeft};
+    ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
+    DcMotor ejector1, ejector2 = null;
     IMU imu;
+    IMU.Parameters myIMUparameters;
     int positionTolerance = 10;
     int precisionPositionTolerance = 50;
     double DISTANCE_PER_ROTATION = 23.5619449019;
     double ROBOT_LENGTH = 38; //In Centimeters
     double speed;
-    List<int[]> checkpoints = new ArrayList<>();
-    int[] currentPosition = new int[4];
-    int[] currentRotation = new int[1];
-    double[] motorDistancesFromRobot = {1,1,1,1};
-    int currentCheckpoint = 0;
+    List<int[]> checkPoints = new ArrayList<>();
+    double[] currentPosition = new double[4];
+    int[] motorRotations = new int[3];
+    double[] currentRotation = new double[1];
+    List<int[]> motorDistancesFromRobot = new ArrayList<>();
+    double cameraOrientationfromRobot = 0;
+    int currentCheckPoint = 0;
     int maxVelocity = 3000;
     int preciseVelocity = 1000;
 
-    List<MotorPosition> supraCheckpoints = new ArrayList<>();
+    public enum runMode {
+
+    }
+    List<int[]> supraCheckpoints = new ArrayList<>();
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
      * The variable to store our instance of the AprilTag processor.
      */
     private AprilTagProcessor aprilTag;
-
+    /**
+     * The variable to store our instance of the vision portal.
+     */
+    private VisionPortal visionPortal;
     public void runOpMode() {
 
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
-        ejector1 = hardwareMap.get(DcMotorEx.class, "ejector1");
-        ejector2 = hardwareMap.get(DcMotorEx.class, "ejector2");
-        intake = hardwareMap.get(CRServo.class, "intake");
-        elevator = hardwareMap.get(CRServo.class, "elevator");
-        motorGroup = new DcMotorEx[]{frontRight, frontLeft, backRight, backLeft};
 
         frontLeft.setTargetPositionTolerance(positionTolerance);
         backLeft.setTargetPositionTolerance(positionTolerance);
         frontRight.setTargetPositionTolerance(positionTolerance);
         backRight.setTargetPositionTolerance(positionTolerance);
-        IMU.Parameters myIMUparameters = new IMU.Parameters(
+        IMU.Parameters myIMUparameters;
+
+        myIMUparameters = new IMU.Parameters(
                 new RevHubOrientationOnRobot(
                         RevHubOrientationOnRobot.LogoFacingDirection.UP,
                         RevHubOrientationOnRobot.UsbFacingDirection.FORWARD
@@ -80,20 +89,15 @@ public class SupraAutonomous extends LinearOpMode {
 
         imu.initialize(myIMUparameters);
 
+
+
+        char[] ballOrder = new char[3];
+        boolean onBlue = true;
+
         initAprilTag();
 
         waitForStart();
 
-
-        frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        frontLeft.setMotorEnable();
-        frontRight.setMotorEnable();
-        backLeft.setMotorEnable();
-        backRight.setMotorEnable();
 
         frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -101,30 +105,32 @@ public class SupraAutonomous extends LinearOpMode {
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         while (opModeIsActive()) {
-
-            frontLeft.setPower(1);
-            frontRight.setPower(1);
-            backLeft.setPower(1);
-            backRight.setPower(1);
-            intake.setPower(1);
-
-            for (int i = 0; i < 4; i++) {
-                motorGroup[i].setTargetPosition(supraCheckpoints.get(currentCheckpoint).get(i));
-                motorGroup[i].setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            for (AprilTagDetection detection : aprilTag.getDetections()) {
+                switch (detection.id) {
+                    case 21:
+                        ballOrder[0] = 'G';
+                        ballOrder[1] = 'P';
+                        ballOrder[2] = 'P';
+                        break;
+                    case 22:
+                        ballOrder[0] = 'P';
+                        ballOrder[1] = 'G';
+                        ballOrder[2] = 'P';
+                        break;
+                    case 23:
+                        ballOrder[0] = 'P';
+                        ballOrder[1] = 'P';
+                        ballOrder[2] = 'G';
+                        break;
+                    default:
+                        break;
+                }
             }
 
-            speed = frontLeft.getVelocity() * DISTANCE_PER_ROTATION / 100;
-            // Share the CPU
-
-            //detects if the motor has arrived to position
-            if (frontRight.getPower() < 0.1 && frontLeft.getPower() < 0.1 &&
-                    backRight.getPower() < 0.1 && backLeft.getPower() < 0.1 &&
-                    currentCheckpoint < supraCheckpoints.size()) {
-                currentCheckpoint += 1;
-            }
+            executeCheckpoint();
 
             telemetryAprilTag();
-            telemetry.addData("speed (m/s)", speed);
+            telemetry.addData("speed", speed);
             telemetry.update();
 
         }
@@ -197,7 +203,7 @@ public class SupraAutonomous extends LinearOpMode {
         builder.addProcessor(aprilTag);
 
         // Build the Vision Portal, using the above settings.
-        VisionPortal visionPortal = builder.build();
+        visionPortal = builder.build();
 
         // Disable or re-enable the aprilTag processor at any time.
         //visionPortal.setProcessorEnabled(aprilTag, true);
@@ -213,13 +219,15 @@ public class SupraAutonomous extends LinearOpMode {
 
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
         telemetry.addData("# AprilTags Detected", currentDetections.size());
-
         // Step through the list of detections and display info for each one.
         for (AprilTagDetection detection : currentDetections) {
             if (detection.metadata != null) {
+                Orientation rot = Orientation.getOrientation(detection.rawPose.R, AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES);
+
                 telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
+                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", rot.firstAngle, rot.secondAngle, rot.thirdAngle));
+                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (pov)", detection.robotPose));
+
                 telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
             } else {
                 telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
@@ -241,54 +249,117 @@ public class SupraAutonomous extends LinearOpMode {
      * not where you want the motor to change to.
      */
     private void addCheckpoint() {
-        supraCheckpoints.add(new MotorPosition(new int[]{0, 0, 0, 0}));
+        supraCheckpoints.add(new int[]{0, 0, 0, 0});
     }
 
     private void executeCheckpoint() {
-        int[] objective = checkpoints.get(currentCheckpoint);
+        int[] objective = checkPoints.get(currentCheckPoint);
+        boolean IsAt = false;
         double orientationObjective;
-        boolean isAt = false;
-
+        double[] wheelpositions = {0,0,0,0};
         if (objective[3] - currentRotation[0] == 0) {
-            orientationObjective = (objective[4] - currentRotation[0]) / (2 * maxVelocity * DISTANCE_PER_ROTATION) / 360;
+            double angleToTurn = Math.tan(objective[0] / objective[2]);
+            double hypot = Math.hypot(objective[0], objective[2]);
+            double powerForStrafe = (1 / (Math.sin(angleToTurn - currentRotation[0]) + 0.5));
+            orientationObjective = (angleToTurn - currentRotation[0]) / (2 * maxVelocity * DISTANCE_PER_ROTATION);
+
+            if ((angleToTurn - currentRotation[0]) * ((Math.hypot(motorDistancesFromRobot.get(0)[0], motorDistancesFromRobot.get(0)[1]) * DISTANCE_PER_ROTATION * Math.PI) / 360 + hypot) > Math.hypot(objective[0], objective[2]) * powerForStrafe) {
+                powerForStrafe *= maxVelocity;
+                for (DcMotorEx motor : motorGroup) {
+                    motor.setTargetPosition((int) Math.round(hypot));
+                }
+                if (powerForStrafe > 0) {
+                    frontLeft.setVelocity(maxVelocity - powerForStrafe);
+                    frontRight.setVelocity(maxVelocity - powerForStrafe);
+                    backLeft.setVelocity(powerForStrafe);
+                    backRight.setVelocity(powerForStrafe);
+                } else {
+                    frontLeft.setVelocity(powerForStrafe);
+                    frontRight.setVelocity(powerForStrafe);
+                    backLeft.setVelocity(maxVelocity - powerForStrafe);
+                    backRight.setVelocity(maxVelocity - powerForStrafe);
+                }
+                runAllMotors();
+                while (!IsAt) {
+                    calculateRobotPosition(motorRotations, new int[]{frontLeft.getCurrentPosition(), frontRight.getCurrentPosition(), backLeft.getCurrentPosition(), backRight.getCurrentPosition()});
+                    for (DcMotorEx motor : motorGroup) {
+                            if (Math.abs(hypot - ((double) motor.getCurrentPosition())) < precisionPositionTolerance) {
+                                motor.setVelocity(preciseVelocity);
+                            } else if (Math.abs(hypot - ((double) motor.getCurrentPosition())) < positionTolerance) {
+                                IsAt = true;
+                            }
+                        }
+                    }
+                    stopAllMotors();
+                    orientationObjective = 0;
+            }
         } else {
             orientationObjective = objective[3];
         }
-        YawPitchRollAngles robotOrientation = imu.getRobotYawPitchRollAngles();
-        robotOrientation.getYaw(AngleUnit.DEGREES);
-
-        IntStream.range(0, 4).forEachOrdered(i -> motorGroup[i].setTargetPosition((int)
-                Math.round(orientationObjective * (motorDistancesFromRobot[i] * 2 * Math.PI))));
-
-        while (!isAt) {
+        YawPitchRollAngles robotOrientation;
+        for (DcMotorEx motor : motorGroup) {
+            motor.setTargetPosition((int) Math.round((orientationObjective * (Math.hypot(motorDistancesFromRobot.get(0)[0], motorDistancesFromRobot.get(0)[1]) * 2 * Math.PI))) / 360);
+        }
+        runAllMotors();
+        currentRotation[0] += (orientationObjective * (Math.hypot(motorDistancesFromRobot.get(0)[0], motorDistancesFromRobot.get(0)[1]) * 2 * Math.PI)) / 360;
+        while (!IsAt) {
+            calculateRobotPosition(motorRotations, new int[]{frontLeft.getCurrentPosition(), frontRight.getCurrentPosition(), backLeft.getCurrentPosition(), backRight.getCurrentPosition()});
             for (DcMotorEx motor : motorGroup) {
                 if (Math.abs(motor.getCurrentPosition() - orientationObjective) < positionTolerance) {
-                    isAt = true;
+                    IsAt = true;
                 } else if (Math.abs(motor.getCurrentPosition() - orientationObjective) < precisionPositionTolerance) {
                     motor.setVelocity(preciseVelocity);
                 } else {
-                    isAt = false;
+                    IsAt = false;
                 }
             }
+
+            robotOrientation = imu.getRobotYawPitchRollAngles();
+            currentRotation[0] = robotOrientation.getYaw();
+            IsAt = (objective[3] - robotOrientation.getYaw(AngleUnit.DEGREES)) < (precisionPositionTolerance * (Math.hypot(motorDistancesFromRobot.get(0)[0], motorDistancesFromRobot.get(0)[1]) * 2 * Math.PI));
         }
+        stopAllMotors();
         if (objective[0] == 0 && objective[1] == 0) {
             int distanceObjective = (int) Math.sqrt(Math.pow(objective[0], 2) + Math.pow(objective[1], 2));
-            isAt = false;
-
-            while (!isAt) {
+            IsAt = false;
+            for (DcMotorEx motor : motorGroup) {
+                motor.setTargetPosition(distanceObjective);
+            }
+            runAllMotors();
+            while (!IsAt) {
+                calculateRobotPosition(motorRotations, new int[]{frontLeft.getCurrentPosition(), frontRight.getCurrentPosition(), backLeft.getCurrentPosition(), backRight.getCurrentPosition()});
                 for (DcMotorEx motor : motorGroup) {
                     if (Math.abs(motor.getCurrentPosition() - distanceObjective) < positionTolerance) {
-                        isAt = true;
+                        IsAt = true;
                     } else if (Math.abs(motor.getCurrentPosition() - distanceObjective) < precisionPositionTolerance) {
                         motor.setVelocity(preciseVelocity);
                     } else {
-                        isAt = false;
+                        IsAt = false;
                     }
                 }
             }
+            stopAllMotors();
         }
     }
+    private void runAllMotors() {
+        for (DcMotorEx motor : motorGroup) {
+            motor.setVelocity(maxVelocity);
+            motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        }
+    }
+    private void stopAllMotors() {
+        for (DcMotorEx motor : motorGroup) {
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
+    }
+    private void preciseAllMotors() {
+        for (DcMotorEx motor : motorGroup) {
+            motor.setVelocity(preciseVelocity);
+        }
+    }
+    private void updateRobotPosition() {
 
+    }
     private void driveToAprilTag(AprilTagDetection tag, double abortDistance) {
         if (tag.metadata != null) {
             double distance = abortDistance - tag.ftcPose.range;
@@ -304,8 +375,18 @@ public class SupraAutonomous extends LinearOpMode {
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
     }
-    private double[] calculateRobotPosition() {
-        return new double[]{};
+    private void calculateRobotPosition(int[] positions, int[] newPositions) {
+        int collectiveChange = newPositions[1] - positions[1];
+        for (int i = 0; i<4; i++) {
+            if (newPositions[i] - positions[i] < collectiveChange) {
+                collectiveChange = newPositions[i] - positions[i];
+            }
+        }
+
+        currentPosition[0] += Math.cos((int) (Math.round(currentRotation[0])))  * collectiveChange;
+        currentPosition[2] += Math.sin((int) (Math.round(currentRotation[0])))  * collectiveChange;
+        currentRotation[0] += Math.tan((double) motorDistancesFromRobot.get(0)[1] / motorDistancesFromRobot.get(0)[0]);
+        motorRotations = positions;
     }
 
 }
