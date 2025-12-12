@@ -46,7 +46,8 @@ public class SupraAutonomous extends LinearOpMode {
     double ROBOT_LENGTH = 38; //In Centimeters
     double speed;
     double[] currentPosition = new double[4];
-    MotorPosition motorRotations = new MotorPosition(new int[4]);
+    int[] motorRotations = new int[4];
+    List<Float> previousDistances = new ArrayList<>();
     double[] currentRotation = new double[2];
     List<int[]> motorDistancesFromRobot = new ArrayList<>();
     double cameraOrientationfromRobot = 0;
@@ -290,7 +291,7 @@ public class SupraAutonomous extends LinearOpMode {
         currentRotation[0] += (orientationObjective * (Math.hypot(motorDistancesFromRobot.get(0)[0],
                 motorDistancesFromRobot.get(0)[1]) * 2 * Math.PI)) / 360;
         while (!IsAt) {
-            calculateRobotPosition(motorRotations, getMotorPositions());
+            calculateRobotPosition(motorRotations, new int[]{frontRight.getCurrentPosition(), frontLeft.getCurrentPosition(), backRight.getCurrentPosition(), backLeft.getCurrentPosition()});
             for (DcMotorEx motor : motorGroup) {
                 if (Math.abs(motor.getCurrentPosition() - orientationObjective) < precisionPositionTolerance) {
                     motor.setVelocity(preciseVelocity);
@@ -368,13 +369,14 @@ public class SupraAutonomous extends LinearOpMode {
     private double calculateLaunchPower(double angle, double distance) {
         return 0; //just a placeholder
     }
-    private void calculateRobotPosition(MotorPosition positions, MotorPosition newPositions) {
-            int collectiveChange = newPositions.get(1) - positions.get(1);
+    private void calculateRobotPosition(int[] positions, int[] newPositions) {
+        int collectiveChange = newPositions[0] - positions[0];
         for (int i = 0; i<4; i++) {
-            if (newPositions.get(i) - positions.get(i) < collectiveChange) {
-                collectiveChange = newPositions.get(i) - positions.get(i);
+            if (newPositions[i] - positions[i] < collectiveChange) {
+                collectiveChange = newPositions[i] - positions[i];
             }
         }
+        motorRotations = newPositions;
 
         currentPosition[0] += Math.cos((int) (Math.round(currentRotation[0]))) * collectiveChange;
         currentPosition[2] += Math.sin((int) (Math.round(currentRotation[0]))) * collectiveChange;
@@ -388,7 +390,8 @@ public class SupraAutonomous extends LinearOpMode {
             currentRotation[0] = 0 - detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES);
         }
 
-        if (Math.cos(currentRotation[0]) * distanceSensor.getDistance(DistanceUnit.CM) - 367.5 + currentPosition[0] > precisionPositionTolerance * 2 && Math.sin(currentRotation[0]) * distanceSensor.getDistance(DistanceUnit.CM) - 367.5 + currentPosition[1] > precisionPositionTolerance * 2) {
+        //determines if current position doesn't align with current angle to determine if robot actual position doesnt align with assumed position
+        if (Math.sin(currentRotation[0]) * distanceSensor.getDistance(DistanceUnit.CM) - 367.5 + currentPosition[0] > precisionPositionTolerance * 2 && Math.cos(currentRotation[0]) * distanceSensor.getDistance(DistanceUnit.CM) - 367.5 + currentPosition[1] > precisionPositionTolerance * 2) {
 
         }
 
