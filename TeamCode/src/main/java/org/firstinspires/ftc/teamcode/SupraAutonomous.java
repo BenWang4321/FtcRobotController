@@ -25,13 +25,15 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 @Autonomous(name="supra autonomous")
 
 public class SupraAutonomous extends LinearOpMode {
-
+    //arena boundaries are 367.5, 367.5
     DcMotorEx frontLeft, backLeft, backRight, frontRight = null;
+    ModernRoboticsI2cRangeSensor distanceSensor = null;
     DcMotorEx[] motorGroup;
     ModernRoboticsI2cRangeSensor rangeSensor;
     double cameraDist;
@@ -43,7 +45,6 @@ public class SupraAutonomous extends LinearOpMode {
     double DISTANCE_PER_ROTATION = 23.5619449019;
     double ROBOT_LENGTH = 38; //In Centimeters
     double speed;
-    List<int[]> checkpoints = new ArrayList<>();
     double[] currentPosition = new double[4];
     MotorPosition motorRotations = new MotorPosition(new int[4]);
     double[] currentRotation = new double[2];
@@ -53,10 +54,12 @@ public class SupraAutonomous extends LinearOpMode {
     int maxVelocity = 3000;
     int preciseVelocity = 1000;
 
+    HashMap<Integer, double[]> supraAprilTag = new HashMap<>();
+    //24.225 from closest point y value
     public enum runMode {
 
     }
-    List<int[]> supraCheckpoints = new ArrayList<>();
+    List<int[]> supraCheckpoints = new ArrayList<>(List.of(new int[]{0,0,0,0}));
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -66,10 +69,14 @@ public class SupraAutonomous extends LinearOpMode {
 
     public void runOpMode() {
 
+        supraAprilTag.put(20, new double[]{34.461,17.961});
+        supraAprilTag.put(24, new double[]{333.039, 349.539});
+
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         backLeft = hardwareMap.get(DcMotorEx.class, "backLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
+        distanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "ultrasonicSensor");
         motorGroup = new DcMotorEx[]{frontRight, frontLeft, backRight, backLeft};
 
         frontLeft.setTargetPositionTolerance(positionTolerance);
@@ -222,7 +229,7 @@ public class SupraAutonomous extends LinearOpMode {
     }
 
     private void executeCheckpoint() {
-        int[] objective = checkpoints.get(currentCheckpoint);
+        int[] objective = supraCheckpoints.get(currentCheckpoint);
         boolean IsAt = false;
         double orientationObjective;
         double[] wheelPositions = {0, 0, 0, 0};
@@ -316,6 +323,7 @@ public class SupraAutonomous extends LinearOpMode {
                 }
             }
             stopAllMotors();
+            currentCheckpoint += 1;
         }
     }
     private void runAllMotors() {
@@ -361,7 +369,7 @@ public class SupraAutonomous extends LinearOpMode {
         return 0; //just a placeholder
     }
     private void calculateRobotPosition(MotorPosition positions, MotorPosition newPositions) {
-        int collectiveChange = newPositions.get(1) - positions.get(1);
+            int collectiveChange = newPositions.get(1) - positions.get(1);
         for (int i = 0; i<4; i++) {
             if (newPositions.get(i) - positions.get(i) < collectiveChange) {
                 collectiveChange = newPositions.get(i) - positions.get(i);
@@ -372,6 +380,18 @@ public class SupraAutonomous extends LinearOpMode {
         currentPosition[2] += Math.sin((int) (Math.round(currentRotation[0]))) * collectiveChange;
         currentRotation[0] += Math.tan((double) motorDistancesFromRobot.get(0)[1] / motorDistancesFromRobot.get(0)[0]);
         motorRotations = positions;
+
+        List<AprilTagDetection> currentDetections = aprilTag.getDetections();
+        for (AprilTagDetection detection : currentDetections) {
+            currentPosition[0] = supraAprilTag.get(detection.id)[0] - detection.robotPose.getPosition().x;
+            currentPosition[1] = supraAprilTag.get(detection.id)[1] - detection.robotPose.getPosition().y;
+            currentRotation[0] = 0 - detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES);
+        }
+
+        if (Math.cos(currentRotation[0]) * distanceSensor.getDistance(DistanceUnit.CM) - 367.5 + currentPosition[0] > precisionPositionTolerance * 2 && Math.sin(currentRotation[0]) * distanceSensor.getDistance(DistanceUnit.CM) - 367.5 + currentPosition[1] > precisionPositionTolerance * 2) {
+
+        }
+
     }
 
 }
