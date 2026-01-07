@@ -14,6 +14,8 @@ public class MecanumDriveForDecode extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        double launchPower = 1;
+
         // Initialize motors
         frontLeft = hardwareMap.get(DcMotorEx.class, "frontLeft");
         frontRight = hardwareMap.get(DcMotorEx.class, "frontRight");
@@ -54,10 +56,10 @@ public class MecanumDriveForDecode extends LinearOpMode {
             double backRightPower = fb - strafe - turn;
             double frontRightPower = fb + strafe - turn;
             */
-            double frontLeftPower = -fb + strafe - turn;
+            double frontLeftPower = -fb - strafe - turn;
             double backLeftPower = fb + strafe + turn;
             double backRightPower = fb - strafe - turn;
-            double frontRightPower = -fb - strafe + turn;
+            double frontRightPower = -fb + strafe + turn;
 
             double max = Math.max(1.0, Math.abs(frontLeftPower));
             max = Math.max(max, Math.abs(backLeftPower));
@@ -77,6 +79,14 @@ public class MecanumDriveForDecode extends LinearOpMode {
                 backRight.setPower(backRightPower);
             }
 
+            if (gamepad2.left_bumper && launchPower > 0) {
+                launchPower -= 0.001;
+            }
+
+            if (gamepad2.right_bumper && launchPower < 1) {
+                launchPower += 0.001;
+            }
+
             elevator.setPower(gamepad2.left_stick_y);
             ejector1.setPower(gamepad2.right_stick_y);
             ejector2.setPower(gamepad2.right_stick_y);
@@ -89,6 +99,8 @@ public class MecanumDriveForDecode extends LinearOpMode {
             telemetry.addData("front right power", frontRightPower);
             telemetry.addData("back left power", backLeftPower);
             telemetry.addData("back right power", backRightPower);
+            telemetry.addData("launch power", ejector1.getPower());
+
             telemetry.update();
         }
     }
