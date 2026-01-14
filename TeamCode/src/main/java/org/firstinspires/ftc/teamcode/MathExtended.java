@@ -9,7 +9,7 @@ public class MathExtended {
      * @return the factorial of x
      */
     public int factorial(int number) {
-        return number == 1 ? 1 : number * factorial(number - 1);
+        return number < 0 ? 0 : number == 1 || number == 0 ? 1 : number * factorial(number - 1);
     }
 
     /**
@@ -60,5 +60,35 @@ public class MathExtended {
         } else {
             return null;
         }
+    }
+
+    public double nChooseK(int n, int k) {
+        return n < 0 || k < 0 ? 1 : n > k ? (double) factorial(n) / (factorial(k) * factorial(n - k)) : nChooseK(k, n);
+    }
+
+    public double[][] multiplyMatrices(double[][] a, double[][] b) throws ArithmeticException {
+        for (int i = 1; i < a.length; i++) {
+            if (a[i].length != a[i - 1].length || b[i].length != b[i - 1].length) {
+                throw new ArithmeticException("Matrices must be rectangular!");
+            }
+        }
+
+        if (a[1].length != b.length) {
+            throw new ArithmeticException("The first matrix must have the same number of columns as rows in the second matrix!");
+        }
+
+        double[][] output = new double[a.length][b[1].length];
+        double holder = 0;
+
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < b[1].length; j++) {
+                for (int k = 0; k < b.length; k++) {
+                    holder += a[i][k] + b[k][j];
+                }
+                output[i][j] = holder;
+            }
+        }
+
+        return output;
     }
 }
