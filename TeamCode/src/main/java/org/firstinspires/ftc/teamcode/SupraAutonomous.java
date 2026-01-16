@@ -45,6 +45,7 @@ public class SupraAutonomous extends LinearOpMode {
     double[] currentPosition = new double[4];
     int[] motorRotations = new int[4];
     double currentRotation = 90;
+    boolean hasmoved = false;
     //front right, front left, back right, back left
     List<double[]> motorDistancesFromRobot = new ArrayList<>(List.of(new double[]{0,129.8, 45}, new double[]{0,129.8, 25, -45}, new double[]{0,129.8, -25, 45}, new double[]{0,129.8, 25, 45}));
 
@@ -224,8 +225,10 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
+        telemetry.addLine(String.format("Target %d", frontRight.getTargetPosition()));
         telemetry.addLine(String.format("X %6.0f, Y %6.0f", currentPosition[0], currentPosition[1]));
         telemetry.addLine(String.format("Rotation %b", (90 - currentRotation) == 0));
+        telemetry.addLine(String.format("hasdone %b", hasmoved));
         telemetry.addLine(String.format("Checkpoint %d, %d", currentCheckpoint, supraCheckpoints.size()));
 
 
@@ -307,8 +310,10 @@ public class SupraAutonomous extends LinearOpMode {
                 backRight.setVelocity(-currentMaxVelocity);
                 backLeft.setVelocity(currentMaxVelocity);
             }
+            if
             int rotations = (int) Math.round(((motorDistancesFromRobot.get(0)[1] * Math.PI * orientationObjective) * 1.5 * DISTANCE_PER_ROTATION + (distance * DISTANCE_PER_ROTATION)));
             runAllMotors(rotations, rotations, rotations, rotations);
+            hasmoved = true;
             while (!IsAt || !interrupted) {
                 calculateRobotRotation();
                 if (Math.abs(orientationObjective - currentRotation) < precisionPositionTolerance) {
@@ -386,16 +391,17 @@ public class SupraAutonomous extends LinearOpMode {
         frontLeft.setTargetPosition(flrotations);
         backRight.setTargetPosition(brrotations);
         backLeft.setTargetPosition(blrotations);
-
+        frontRight.setPower(1);
+        frontLeft.setPower(1);
+        backRight.setPower(1);
+        backLeft.setPower(1);
+        hasmoved = true;
         for (DcMotorEx motor : motorGroup) {
             motor.setVelocity(currentMaxVelocity);
             motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
 
-        frontRight.setPower(1);
-        frontLeft.setPower(1);
-        backRight.setPower(1);
-        backLeft.setPower(1);
+
     }
     private void stopAllMotors() {
         for (DcMotorEx motor : motorGroup) {
