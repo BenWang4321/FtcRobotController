@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import java.util.concurrent.LinkedTransferQueue;
+
 public class MathExtended {
     /**
      * The factorial function solves for a repeated sequence of multiplication,
@@ -9,7 +11,7 @@ public class MathExtended {
      * @return the factorial of x
      */
     public int factorial(int number) {
-        return number == 1 ? 1 : number * factorial(number - 1);
+        return number < 0 ? 0 : number == 1 || number == 0 ? 1 : number * factorial(number - 1);
     }
 
     /**
@@ -47,6 +49,14 @@ public class MathExtended {
 
         return Math.sqrt(holder);
     }
+
+    /**
+     * Calculates the quadratic equation in the form ax^2 + bx + c = 0 (real outputs only)
+     * @param a the coefficient for the term x^2
+     * @param b the coefficient for the term x
+     * @param c the constant
+     * @return  x
+     */
     public double[] quadratic(double a, double b, double c) {
         double discriminant = b * b - 4 * a * c;
 
@@ -60,5 +70,67 @@ public class MathExtended {
         } else {
             return null;
         }
+    }
+
+    /**
+     * The binomial coefficient, how many combinations of k items can be made out of a group of n items,
+     * where order doesn't matter.
+     * @param n the total number of items
+     * @param k the number of items picked
+     * @return  n!/(k!*(n-k!))
+     */
+    public double nChooseK(int n, int k) {
+        return n < 0 || k < 0 ? 1 : n > k ? (double) factorial(n) / (factorial(k) * factorial(n - k)) : nChooseK(k, n);
+    }
+
+    /**
+     * Just read the Wikipedia article on matrix multiplication, it's too complicated.
+     * @param a the first matrix
+     * @param b the second matrix
+     * @return  the matrix product
+     * @throws ArithmeticException when the matrices cannot be multiplied
+     */
+    public double[][] multiplyMatrices(double[][] a, double[][] b) throws ArithmeticException {
+        for (int i = 1; i < a.length; i++) {
+            if (a[i].length != a[i - 1].length || b[i].length != b[i - 1].length) {
+                throw new ArithmeticException("Matrices must be rectangular!");
+            }
+        }
+
+        if (a[1].length != b.length) {
+            throw new ArithmeticException("The first matrix must have the same number of columns as rows in the second matrix!");
+        }
+
+        double[][] output = new double[a.length][b[1].length];
+        double holder = 0;
+
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < b[1].length; j++) {
+                for (int k = 0; k < b.length; k++) {
+                    holder += a[i][k] + b[k][j];
+                }
+                output[i][j] = holder;
+            }
+        }
+
+        return output;
+    }
+
+    /**
+     * Same as the Math.max() method, but can fit more than 2 terms
+     * @param inputs find the maximum value in these values
+     * @return       the maximum value in the inputted values
+     */
+    public double max(double... inputs) {
+        double output = 0;
+
+        for (double value : inputs) {
+            for (double input : inputs) {
+                value = Math.max(value, input);
+                output = value;
+            }
+        }
+
+        return output;
     }
 }
