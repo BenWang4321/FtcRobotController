@@ -8,11 +8,9 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -37,9 +35,11 @@ public class SupraAutonomous extends LinearOpMode {
     IMU imu;
     IMU.Parameters myIMUparameters;
     int positionTolerance = 10;
-    int precisionPositionTolerance = 50;
-    double DISTANCE_PER_ROTATION = 23.5619449019;
     double FRICTION_COEFFICIENT = 0.638297872; //friction force / effective force applied
+
+    double DISTANCE_PER_ROTATION = (23.5619449019) * FRICTION_COEFFICIENT; //distance for each omniwheel rotation multiplied by the velocity which is, 1/60seconds
+    int precisionPositionTolerance = 4 / 2;
+
     double ROBOT_LENGTH = 38; //In Centimeters
     double speed;
     double[] currentPosition = new double[4];
@@ -60,7 +60,7 @@ public class SupraAutonomous extends LinearOpMode {
     public enum runMode {
 
     }
-    List<double[]> supraCheckpoints = new ArrayList<>(List.of(new double[]{121.9,0,90}));
+    List<double[]> supraCheckpoints = new ArrayList<>(List.of(new double[]{100 * DISTANCE_PER_ROTATION,0,90}));
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -110,7 +110,7 @@ public class SupraAutonomous extends LinearOpMode {
         backRight.setDirection(DcMotorEx.Direction.REVERSE);
 
         while (opModeIsActive()) {
-            if (currentCheckpoint + 1 > supraCheckpoints.size()) {
+            if (currentCheckpoint + 1 >= supraCheckpoints.size()) {
                 executeCheckpoint();
             }
             telemetryAprilTag();
@@ -232,7 +232,6 @@ public class SupraAutonomous extends LinearOpMode {
         telemetry.addLine(String.format("Checkpoint %d, %d", currentCheckpoint, supraCheckpoints.size()));
 
 
-
     }   // end method telemetryAprilTag()
 
     /**
@@ -277,16 +276,16 @@ public class SupraAutonomous extends LinearOpMode {
         currentMaxVelocity = maxVelocity;
         if (false) {
             //Calculate if the robot has arrived at the objective through matching the robots position with the objective. Will also stop mid process if called upon. Will slow down the robot if it nears the target.
-            while (!IsAt || !interrupted) {
+            while ((!IsAt || !interrupted) && opModeIsActive()) {
                 frontRight.setVelocity(currentMaxVelocity * frontRightSpeed);
                 frontLeft.setVelocity(currentMaxVelocity * frontLeftSpeed);
                 backRight.setVelocity(currentMaxVelocity * backRightSpeed);
                 backLeft.setVelocity(currentMaxVelocity * backLeftSpeed);
                 calculateRobotPosition();
-                if (Math.abs(currentPosition[0] - objective[0]) < precisionPositionTolerance || Math.abs(currentPosition[1] - objective[1]) < precisionPositionTolerance) {
+                if (Math.abs(currentPosition[0] - objective[0]) < precisionPositionTolerance && Math.abs(currentPosition[1] - objective[1]) < precisionPositionTolerance) {
                     currentMaxVelocity = preciseVelocity;
                     setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance || Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
+                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance &&f Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
                     IsAt = true;
                 } else {
                     setMaxVelocity(maxVelocity);
@@ -295,57 +294,50 @@ public class SupraAutonomous extends LinearOpMode {
         } else {
             //rotate robot
             //direction false is left, true is right
-            if (orientationProcess != 0) {
-                interrupted = true;
-                supraCheckpoints.add(currentCheckpoint, new double[] {currentPosition[0], currentPosition[1], orientationObjective});
-            }
-            if (orientationProcess < 0.5) {
-                frontRight.setVelocity(currentMaxVelocity);
-                frontLeft.setVelocity(-currentMaxVelocity);
-                backRight.setVelocity(currentMaxVelocity);
-                backLeft.setVelocity(-currentMaxVelocity);
-            } else {
-                frontRight.setVelocity(-currentMaxVelocity);
-                frontLeft.setVelocity(currentMaxVelocity);
-                backRight.setVelocity(-currentMaxVelocity);
-                backLeft.setVelocity(currentMaxVelocity);
-            }
-            if
-            int rotations = (int) Math.round(((motorDistancesFromRobot.get(0)[1] * Math.PI * orientationObjective) * 1.5 * DISTANCE_PER_ROTATION + (distance * DISTANCE_PER_ROTATION)));
-            runAllMotors(rotations, rotations, rotations, rotations);
-            hasmoved = true;
-            while (!IsAt || !interrupted) {
-                calculateRobotRotation();
-                if (Math.abs(orientationObjective - currentRotation) < precisionPositionTolerance) {
-                    setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(currentRotation - orientationObjective) < positionTolerance) {
-                    IsAt = true;
+
+            /*if (orientationObjective < positionTolerance / 360) {
+                int rotations = (int) Math.round(((motorDistancesFromRobot.get(0)[1] * Math.PI * orientationObjective) * 1.5 * DISTANCE_PER_ROTATION + (distance * DISTANCE_PER_ROTATION)));
+                if (orientationProcess < 0.5) {
+                    runAllMotors(rotations, -rotations, rotations, -rotations);
                 } else {
-                    setMaxVelocity(maxVelocity);
+                    runAllMotors(-rotations, rotations, -rotations, rotations);
                 }
+                runAllMotors(rotations, rotations, rotations, rotations);
+                hasmoved = true;
+                while ((!IsAt || !interrupted) && opModeIsActive()) {
+                    calculateRobotRotation();
+                    if (Math.abs(orientationObjective - currentRotation) < precisionPositionTolerance) {
+                        setMaxVelocity(preciseVelocity);
+                    } else if (Math.abs(currentRotation - orientationObjective) < positionTolerance) {
+                        IsAt = true;
+                    } else {
+                        setMaxVelocity(maxVelocity);
+                    }
+                    if ((currentRotation - orientationObjective) > 0) {
+                        frontRight.setPower(-1);
+                        frontLeft.setPower(1);
+                        BackRight.setPower(-1);
+                        backLeft.setPower(1);
+                    } else {
+                        frontRight.setPower(1);
+                        frontLeft.setPower(-1);
+                        BackRight.setPower(1);
+                        backLeft.setPower(-1);
+                }
+                stopAllMotors();
             }
-            stopAllMotors();
+
+             */
             int move = (int) Math.round(distance);
             runAllMotors(move, move, move, move);
-            frontRight.setVelocity(maxVelocity);
-            frontLeft.setVelocity(maxVelocity);
-            backRight.setVelocity(maxVelocity);
-            backLeft.setVelocity(maxVelocity);
-
-            while (!IsAt || !interrupted) {
+            while ((!IsAt || !interrupted) && opModeIsActive()) {
                 calculateRobotRotation();
                 calculateRobotRotation();
+                telemetry.addLine(String.format("motorpos %d %d %d %d", frontRight.getCurrentPosition(), frontLeft.getCurrentPosition(), backRight.getCurrentPosition(), backLeft.getCurrentPosition()));
+                telemetry.update();
                 if (Math.abs(orientationObjective - currentRotation) < positionTolerance) {
                     supraCheckpoints.add(currentCheckpoint, new double[] {0,0, orientationObjective + (currentRotation - orientationObjective)});
-                    interrupted = true;
-                } else {
-                    for (DcMotorEx motor:motorGroup) {
-                        if (motor.getDirection() == DcMotorSimple.Direction.FORWARD) {
-                            motor.setDirection(DcMotorSimple.Direction.REVERSE);
-                        } else {
-                            motor.setDirection(DcMotorSimple.Direction.FORWARD);
-                        }
-                    }
+                    //interrupted = true;
                 }
                 if (Math.abs(objective[0] - currentPosition[0]) < precisionPositionTolerance || Math.abs(objective[1] - currentPosition[1]) < precisionPositionTolerance) {
                     setMaxVelocity(preciseVelocity);
@@ -357,30 +349,6 @@ public class SupraAutonomous extends LinearOpMode {
             }
 
         }
-        //Check if orientation is correct for driving straight
-        if (Math.abs(orientationObjective - currentRotation) < preciseVelocity) {
-            if (Math.abs(orientationProcess) > 0.5) {
-                frontRight.setVelocity(currentMaxVelocity);
-                frontLeft.setVelocity(-currentMaxVelocity);
-                backRight.setVelocity(currentMaxVelocity);
-                backLeft.setVelocity(-currentMaxVelocity);
-            } else {
-                frontRight.setVelocity(-currentMaxVelocity);
-                frontLeft.setVelocity(currentMaxVelocity);
-                backRight.setVelocity(-currentMaxVelocity);
-                backLeft.setVelocity(currentMaxVelocity);
-            }
-            while (!IsAt || !interrupted) {
-                calculateRobotRotation();
-                if (Math.abs(orientationObjective - currentRotation) < precisionPositionTolerance) {
-                    setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(currentRotation - orientationObjective) < positionTolerance) {
-                    IsAt = true;
-                } else {
-                    setMaxVelocity(maxVelocity);
-                }
-            }
-        }
         stopAllMotors();
         if (IsAt == true) {
             currentCheckpoint += 1;
@@ -391,10 +359,6 @@ public class SupraAutonomous extends LinearOpMode {
         frontLeft.setTargetPosition(flrotations);
         backRight.setTargetPosition(brrotations);
         backLeft.setTargetPosition(blrotations);
-        frontRight.setPower(1);
-        frontLeft.setPower(1);
-        backRight.setPower(1);
-        backLeft.setPower(1);
         hasmoved = true;
         for (DcMotorEx motor : motorGroup) {
             motor.setVelocity(currentMaxVelocity);
@@ -433,17 +397,10 @@ public class SupraAutonomous extends LinearOpMode {
         );
         currentRotation = robotOrientation.firstAngle;
     }
-    private boolean calculateRobotPosition() {
+    private void calculateRobotPosition() {
         int[] newPositions = {frontRight.getCurrentPosition(), frontLeft.getCurrentPosition(), backRight.getCurrentPosition(), backLeft.getCurrentPosition()};
-        int collectiveChange = newPositions[0] - motorRotations[0];
-        int excessChange = 0;
-        for (int i = 0; i<4; i++) {
-            if (newPositions[i] - motorRotations[i] < collectiveChange) {
-                collectiveChange = newPositions[i] - motorRotations[i];
-            } else if (newPositions[i] - motorRotations[i] - collectiveChange > excessChange) {
-                excessChange = newPositions[i] - motorRotations[i] - collectiveChange;
-            }
-        }
+        currentPosition[0] += Math.acos(currentRotation) * Math.hypot(newPositions[0] - motorRotations[0], newPositions[1] - motorRotations[1]);
+        currentPosition[1] += Math.asin(currentRotation) * Math.hypot(newPositions[0] - motorRotations[0], newPositions[1] - motorRotations[1]);
         motorRotations = newPositions;
 
         /*currentPosition[0] += Math.cos((double) (Math.round(currentRotation/))) * collectiveChange;
@@ -464,12 +421,6 @@ public class SupraAutonomous extends LinearOpMode {
         }
 
          */
-        boolean interrupted = false;
-        AngularVelocity angleChange = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
-        if (Math.sin(DISTANCE_PER_ROTATION * (excessChange)) < angleChange.zRotationRate && distanceSensor.getDistance(DistanceUnit.CM) < 20) {
-            interrupted = true;
-        }
-        return interrupted;
     }
     public void velocityLeavingLauncher(){
         double Distance_toGoal = rangeSensor.getDistance(DistanceUnit.CM);
@@ -485,6 +436,6 @@ public class SupraAutonomous extends LinearOpMode {
     }
 
     public void setMaxVelocity(int minVelocity) {
-        currentMaxVelocity = (int) Math.min(minVelocity, Math.max(backRight.getVelocity(), Math.max(backLeft.getVelocity(), Math.max(frontLeft.getVelocity(), frontRight.getVelocity()))));
+        currentMaxVelocity = (int) Math.max(minVelocity, Math.max(backRight.getVelocity(), Math.max(backLeft.getVelocity(), Math.max(frontLeft.getVelocity(), frontRight.getVelocity()))));
     }
 }

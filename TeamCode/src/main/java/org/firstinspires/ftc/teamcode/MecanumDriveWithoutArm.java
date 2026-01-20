@@ -1,13 +1,11 @@
 package org.firstinspires.ftc.teamcode;
 
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-@Disabled
 @TeleOp(name = "Mecanum Drive without arm", group = "Testing")
 public class MecanumDriveWithoutArm extends LinearOpMode {
 
@@ -22,7 +20,7 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
         backRight = hardwareMap.get(DcMotor.class, "backRight");
         // Reverse the right side motors for proper direction
         frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
-        backRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
 
@@ -36,9 +34,9 @@ public class MecanumDriveWithoutArm extends LinearOpMode {
 
         while (opModeIsActive()) {
             // Get joystick values
-            double fb = -gamepad1.left_stick_x; // Scale for smoother control
-            double strafe = -gamepad1.left_stick_y; // Scale strafing
-            double turn = gamepad1.right_stick_x;
+            double fb = -gamepad1.left_stick_y; // Scale for smoother control
+            double strafe = -gamepad1.left_stick_x; // Scale strafing
+            double turn = -gamepad1.right_stick_x;
 
             //fb & turn: fr, fl inverted
             //strafe: fr, bl inverted
