@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -36,9 +37,9 @@ public class SupraAutonomous extends LinearOpMode {
     IMU.Parameters myIMUparameters;
     int positionTolerance = 10;
     double FRICTION_COEFFICIENT = 0.638297872; //friction force / effective force applied
-
-    double DISTANCE_PER_ROTATION = (23.5619449019) * FRICTION_COEFFICIENT; //distance for each omniwheel rotation multiplied by the velocity which is, 1/60seconds
-    int precisionPositionTolerance = 4 / 2;
+    int MOTOR_COUNTS_PER_REVOLUTION = 28; //galaxy motor counts per revolution.
+    double ROTATIONS_PER_CM = (23.5619449019) / MOTOR_COUNTS_PER_REVOLUTION * FRICTION_COEFFICIENT; //distance for each omniwheel rotation multiplied by the velocity which is, 1/60seconds
+    int precisionPositionTolerance = 4;
 
     double ROBOT_LENGTH = 38; //In Centimeters
     double speed;
@@ -60,7 +61,7 @@ public class SupraAutonomous extends LinearOpMode {
     public enum runMode {
 
     }
-    List<double[]> supraCheckpoints = new ArrayList<>(List.of(new double[]{100 * DISTANCE_PER_ROTATION,0,90}));
+    List<double[]> supraCheckpoints = new ArrayList<>(List.of(new double[]{100 / ROTATIONS_PER_CM,100 / ROTATIONS_PER_CM,90}));
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
     /**
@@ -103,11 +104,6 @@ public class SupraAutonomous extends LinearOpMode {
         //initAprilTag();
 
         waitForStart();
-
-        frontLeft.setDirection(DcMotorEx.Direction.FORWARD);
-        frontRight.setDirection(DcMotorEx.Direction.REVERSE);
-        backLeft.setDirection(DcMotorEx.Direction.FORWARD);
-        backRight.setDirection(DcMotorEx.Direction.REVERSE);
 
         while (opModeIsActive()) {
             if (currentCheckpoint + 1 >= supraCheckpoints.size()) {
@@ -242,6 +238,9 @@ public class SupraAutonomous extends LinearOpMode {
      */
 
     private void executeCheckpoint() {
+        for (DcMotorEx motor:motorGroup) {
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
         double[] objective = supraCheckpoints.get(currentCheckpoint);
         boolean IsAt = false;
         boolean interrupted = false;
@@ -249,7 +248,6 @@ public class SupraAutonomous extends LinearOpMode {
         if ((objective[2] / 360) - Math.floor(objective[2] / 360) - (currentRotation / 360) > (double) positionTolerance / 360) {
             orientationObjective = objective[2];
         }
-        double orientationProcess = orientationObjective = (orientationObjective - currentRotation) / ((int) 360 - Math.floor(orientationObjective / 360));
         if (orientationObjective > 0.5) {
             orientationObjective -= 0.5;
         } else if (orientationObjective < -0.5) {
@@ -257,11 +255,11 @@ public class SupraAutonomous extends LinearOpMode {
         }
         double distance = Math.hypot(objective[0] - currentPosition[0], objective[1] - currentPosition[1]);
         double[] strafe = calculateStrafing(objective[0], objective[1], 0,0);
-        double frontRightSpeed = (strafe[0] + strafe[1]) / 2;
-        double frontLeftSpeed = (-strafe[0] + strafe[1]) / 2;
-        double backRightSpeed = (strafe[0] + strafe[1]) / 2;
-        double backLeftSpeed = (-strafe[0] + strafe[1]) / 2;
-        double max = Math.max(frontRightSpeed, Math.max(frontLeftSpeed, Math.max(backLeftSpeed, Math.max(backRightSpeed, 1))));
+        double frontRightSpeed = ((Math.sin(currentRotation + 315) * distance) - (Math.sin(currentRotation + 315) * distance));
+        double frontLeftSpeed = ((Math.sin(currentRotation + 315) * distance) + (Math.sin(currentRotation + 315) * distance));
+        double backRightSpeed = ((Math.sin(currentRotation + 315) * distance) + (Math.sin(currentRotation + 315) * distance));
+        double backLeftSpeed = ((Math.sin(currentRotation + 315) * distance) - (Math.sin(currentRotation + 315) * distance));
+        double max = Math.max(frontRightSpeed, Math.max(frontLeftSpeed, Math.max(backLeftSpeed, Math.min(backRightSpeed, 1))));
         frontRightSpeed /= max;
         frontLeftSpeed /= max;
         backRightSpeed /= max;
@@ -271,10 +269,10 @@ public class SupraAutonomous extends LinearOpMode {
         //The speed required for strafing is the distance moved multiplied by the max speed the motor can move
         double strafeSpeed = strafePower * distance;
         //The speed required for driving straight is the turn speed plus the distance. The turn speed  is the circumferance distance of the robot / 2. The circumferance is Pi * 2 * radii. The radii is a wheels distance from the center of the robot. Rotating speed multiplied to compensate for acceleration.
-        double straightSpeed = (motorDistancesFromRobot.get(0)[1] / DISTANCE_PER_ROTATION * Math.PI * orientationObjective) / 360 * 1.5 + distance;
+        double straightSpeed = (motorDistancesFromRobot.get(0)[1] / ROTATIONS_PER_CM * Math.PI * orientationObjective) / 360 * 1.5 + distance;
         //Compares the required speed for strafing and Driving straight
         currentMaxVelocity = maxVelocity;
-        if (false) {
+        if (true) {
             //Calculate if the robot has arrived at the objective through matching the robots position with the objective. Will also stop mid process if called upon. Will slow down the robot if it nears the target.
             while ((!IsAt || !interrupted) && opModeIsActive()) {
                 frontRight.setVelocity(currentMaxVelocity * frontRightSpeed);
@@ -285,7 +283,7 @@ public class SupraAutonomous extends LinearOpMode {
                 if (Math.abs(currentPosition[0] - objective[0]) < precisionPositionTolerance && Math.abs(currentPosition[1] - objective[1]) < precisionPositionTolerance) {
                     currentMaxVelocity = preciseVelocity;
                     setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance &&f Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
+                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance && Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
                     IsAt = true;
                 } else {
                     setMaxVelocity(maxVelocity);
@@ -296,7 +294,7 @@ public class SupraAutonomous extends LinearOpMode {
             //direction false is left, true is right
 
             /*if (orientationObjective < positionTolerance / 360) {
-                int rotations = (int) Math.round(((motorDistancesFromRobot.get(0)[1] * Math.PI * orientationObjective) * 1.5 * DISTANCE_PER_ROTATION + (distance * DISTANCE_PER_ROTATION)));
+                int rotations = (int) Math.round(((motorDistancesFromRobot.get(0)[1] * Math.PI * orientationObjective) * 1.5 * ROTATIONS_PER_CM + (distance * ROTATIONS_PER_CM)));
                 if (orientationProcess < 0.5) {
                     runAllMotors(rotations, -rotations, rotations, -rotations);
                 } else {
@@ -334,18 +332,23 @@ public class SupraAutonomous extends LinearOpMode {
                 calculateRobotRotation();
                 calculateRobotRotation();
                 telemetry.addLine(String.format("motorpos %d %d %d %d", frontRight.getCurrentPosition(), frontLeft.getCurrentPosition(), backRight.getCurrentPosition(), backLeft.getCurrentPosition()));
+                telemetry.addLine(String.format("rotation %6.1f %6.1f", orientationObjective, currentPosition[2]));
+                telemetry.addLine(String.format("Position %6.1f %6.1f", currentPosition[0], currentPosition[1]));
                 telemetry.update();
-                if (Math.abs(orientationObjective - currentRotation) < positionTolerance) {
+                /* if (Math.abs(orientationObjective - currentRotation[2]) < positionTolerance) {
                     supraCheckpoints.add(currentCheckpoint, new double[] {0,0, orientationObjective + (currentRotation - orientationObjective)});
                     //interrupted = true;
                 }
-                if (Math.abs(objective[0] - currentPosition[0]) < precisionPositionTolerance || Math.abs(objective[1] - currentPosition[1]) < precisionPositionTolerance) {
+
+                 */
+                if (Math.abs(objective[0] - currentPosition[0]) < precisionPositionTolerance && Math.abs(objective[1] - currentPosition[1]) < precisionPositionTolerance) {
                     setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance || Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
+                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance && Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
                     IsAt = true;
                 } else {
                     setMaxVelocity(maxVelocity);
                 }
+                AngularVelocity test = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
             }
 
         }
@@ -359,6 +362,11 @@ public class SupraAutonomous extends LinearOpMode {
         frontLeft.setTargetPosition(flrotations);
         backRight.setTargetPosition(brrotations);
         backLeft.setTargetPosition(blrotations);
+
+        frontRight.setPower(1);
+        frontLeft.setPower(1);
+        backRight.setPower(1);
+        backLeft.setPower(1);
         hasmoved = true;
         for (DcMotorEx motor : motorGroup) {
             motor.setVelocity(currentMaxVelocity);
@@ -429,10 +437,19 @@ public class SupraAutonomous extends LinearOpMode {
         //ejector1.setPower(power);
         //ejector2.setPower(power);
     }
-    //multiplies the distance by the robot's angle to calculate the slope distance for strafing. Calculates the x (forward) power each wheel must have. The y (right) power depends on each wheel as they have different angles
+
+    /**
+     * multiplies the distance by the robot's angle to calculate the slope distance for strafing.
+     * Calculates the x (forward) power each wheel must have. The y (right) power depends on each
+     * wheel as they have different angles
+     * @param objective1
+     * @param objective2
+     * @param wheelAngleOffsetX
+     * @param wheelAngleOffsetY
+     * @return
+     */
     public double[] calculateStrafing(double objective1, double objective2, double wheelAngleOffsetX, double wheelAngleOffsetY) {
-        double[] objective = {(objective1 - (objective1 - currentPosition[0]) * Math.cos(currentRotation + wheelAngleOffsetX)) / (objective2-currentPosition[1] * Math.cos(currentRotation + wheelAngleOffsetX)), (objective2 - (objective1 - currentPosition[0]) * Math.cos(currentRotation + wheelAngleOffsetY)) / (objective2-currentPosition[1] * Math.cos(currentRotation + wheelAngleOffsetY))};
-        return objective;
+        return new double[]{(objective1 * Math.cos(currentRotation + wheelAngleOffsetX)) / (objective1 * Math.sin(currentRotation + wheelAngleOffsetX)), (objective2 * Math.cos(currentRotation + wheelAngleOffsetY)) / (objective2 * Math.cos(currentRotation + wheelAngleOffsetY))};
     }
 
     public void setMaxVelocity(int minVelocity) {
