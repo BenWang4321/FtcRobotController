@@ -9,8 +9,8 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 @TeleOp(name = "Mecanum drive for Decode 2025-2026", group = "TeleOp")
 public class MecanumDriveForDecode extends LinearOpMode {
-    public DcMotorEx frontLeft, frontRight, backLeft, backRight, ejector1, ejector2 = null;
-    public CRServo elevator, intake = null;
+    public DcMotorEx frontLeft, frontRight, backLeft, backRight, ejector1, ejector2, elevator = null;
+    public CRServo intake = null;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -21,8 +21,9 @@ public class MecanumDriveForDecode extends LinearOpMode {
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
         ejector1 = hardwareMap.get(DcMotorEx.class, "ejector1");
         ejector2 = hardwareMap.get(DcMotorEx.class, "ejector2");
+        elevator = hardwareMap.get(DcMotorEx.class, "elevator");
         intake = hardwareMap.get(CRServo.class, "intake");
-        elevator = hardwareMap.get(CRServo.class, "elevator");
+
         // Reverse the right side motors for proper direction
         frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -38,6 +39,7 @@ public class MecanumDriveForDecode extends LinearOpMode {
         backRight.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         ejector1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         ejector2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        elevator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         waitForStart();
 
         while (opModeIsActive()) {

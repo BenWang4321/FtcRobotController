@@ -115,9 +115,6 @@ public class SupraAutonomous extends LinearOpMode {
         }
     }
 
-    /**
-     * Initialize the AprilTag processor.
-     */
     /*private void initAprilTag() {
 
         // Create the AprilTag processor.
@@ -268,122 +265,47 @@ public class SupraAutonomous extends LinearOpMode {
 
         //The speed required for strafing is the distance moved multiplied by the max speed the motor can move
         double strafeSpeed = strafePower * distance;
-        //The speed required for driving straight is the turn speed plus the distance. The turn speed  is the circumferance distance of the robot / 2. The circumferance is Pi * 2 * radii. The radii is a wheels distance from the center of the robot. Rotating speed multiplied to compensate for acceleration.
+        //The speed required for driving straight is the turn speed plus the distance.
+        // The turn speed is the circumference distance of the robot / 2. The circumference is Pi * 2 * radii.
+        // The radii is a wheels distance from the center of the robot. Rotating speed multiplied to compensate for acceleration.
         double straightSpeed = (motorDistancesFromRobot.get(0)[1] / ROTATIONS_PER_CM * Math.PI * orientationObjective) / 360 * 1.5 + distance;
         //Compares the required speed for strafing and Driving straight
         currentMaxVelocity = maxVelocity;
-        if (true) {
-            //Calculate if the robot has arrived at the objective through matching the robots position with the objective. Will also stop mid process if called upon. Will slow down the robot if it nears the target.
-            while ((!IsAt || !interrupted) && opModeIsActive()) {
-                frontRight.setVelocity(currentMaxVelocity * frontRightSpeed);
-                frontLeft.setVelocity(currentMaxVelocity * frontLeftSpeed);
-                backRight.setVelocity(currentMaxVelocity * backRightSpeed);
-                backLeft.setVelocity(currentMaxVelocity * backLeftSpeed);
-                calculateRobotPosition();
-                if (Math.abs(currentPosition[0] - objective[0]) < precisionPositionTolerance && Math.abs(currentPosition[1] - objective[1]) < precisionPositionTolerance) {
-                    currentMaxVelocity = preciseVelocity;
-                    setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance && Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
-                    IsAt = true;
-                } else {
-                    setMaxVelocity(maxVelocity);
-                }
+        //Calculate if the robot has arrived at the objective through matching the robots position with the objective. Will also stop mid process if called upon. Will slow down the robot if it nears the target.
+        while ((!IsAt || !interrupted) && opModeIsActive()) {
+            frontRight.setVelocity(currentMaxVelocity * frontRightSpeed);
+            frontLeft.setVelocity(currentMaxVelocity * frontLeftSpeed);
+            backRight.setVelocity(currentMaxVelocity * backRightSpeed);
+            backLeft.setVelocity(currentMaxVelocity * backLeftSpeed);
+            calculateRobotPosition();
+            if (Math.abs(currentPosition[0] - objective[0]) < precisionPositionTolerance && Math.abs(currentPosition[1] - objective[1]) < precisionPositionTolerance) {
+                currentMaxVelocity = preciseVelocity;
+                setMaxVelocity(preciseVelocity);
+            } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance && Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
+                IsAt = true;
+            } else {
+                setMaxVelocity(maxVelocity);
             }
-        } else {
-            //rotate robot
-            //direction false is left, true is right
-
-            /*if (orientationObjective < positionTolerance / 360) {
-                int rotations = (int) Math.round(((motorDistancesFromRobot.get(0)[1] * Math.PI * orientationObjective) * 1.5 * ROTATIONS_PER_CM + (distance * ROTATIONS_PER_CM)));
-                if (orientationProcess < 0.5) {
-                    runAllMotors(rotations, -rotations, rotations, -rotations);
-                } else {
-                    runAllMotors(-rotations, rotations, -rotations, rotations);
-                }
-                runAllMotors(rotations, rotations, rotations, rotations);
-                hasmoved = true;
-                while ((!IsAt || !interrupted) && opModeIsActive()) {
-                    calculateRobotRotation();
-                    if (Math.abs(orientationObjective - currentRotation) < precisionPositionTolerance) {
-                        setMaxVelocity(preciseVelocity);
-                    } else if (Math.abs(currentRotation - orientationObjective) < positionTolerance) {
-                        IsAt = true;
-                    } else {
-                        setMaxVelocity(maxVelocity);
-                    }
-                    if ((currentRotation - orientationObjective) > 0) {
-                        frontRight.setPower(-1);
-                        frontLeft.setPower(1);
-                        BackRight.setPower(-1);
-                        backLeft.setPower(1);
-                    } else {
-                        frontRight.setPower(1);
-                        frontLeft.setPower(-1);
-                        BackRight.setPower(1);
-                        backLeft.setPower(-1);
-                }
-                stopAllMotors();
-            }
-
-             */
-            int move = (int) Math.round(distance);
-            runAllMotors(move, move, move, move);
-            while ((!IsAt || !interrupted) && opModeIsActive()) {
-                calculateRobotRotation();
-                calculateRobotRotation();
-                telemetry.addLine(String.format("motorpos %d %d %d %d", frontRight.getCurrentPosition(), frontLeft.getCurrentPosition(), backRight.getCurrentPosition(), backLeft.getCurrentPosition()));
-                telemetry.addLine(String.format("rotation %6.1f %6.1f", orientationObjective, currentPosition[2]));
-                telemetry.addLine(String.format("Position %6.1f %6.1f", currentPosition[0], currentPosition[1]));
-                telemetry.update();
-                /* if (Math.abs(orientationObjective - currentRotation[2]) < positionTolerance) {
-                    supraCheckpoints.add(currentCheckpoint, new double[] {0,0, orientationObjective + (currentRotation - orientationObjective)});
-                    //interrupted = true;
-                }
-
-                 */
-                if (Math.abs(objective[0] - currentPosition[0]) < precisionPositionTolerance && Math.abs(objective[1] - currentPosition[1]) < precisionPositionTolerance) {
-                    setMaxVelocity(preciseVelocity);
-                } else if (Math.abs(objective[0] - currentPosition[0]) < positionTolerance && Math.abs(objective[1] - currentPosition[1]) < positionTolerance) {
-                    IsAt = true;
-                } else {
-                    setMaxVelocity(maxVelocity);
-                }
-                AngularVelocity test = imu.getRobotAngularVelocity(AngleUnit.DEGREES);
-            }
-
         }
         stopAllMotors();
-        if (IsAt == true) {
+        if (IsAt) {
             currentCheckpoint += 1;
         }
     }
-    private void runAllMotors(int frrotations, int flrotations, int brrotations, int blrotations) {
-        frontRight.setTargetPosition(frrotations);
-        frontLeft.setTargetPosition(flrotations);
-        backRight.setTargetPosition(brrotations);
-        backLeft.setTargetPosition(blrotations);
-
-        frontRight.setPower(1);
-        frontLeft.setPower(1);
-        backRight.setPower(1);
-        backLeft.setPower(1);
-        hasmoved = true;
-        for (DcMotorEx motor : motorGroup) {
-            motor.setVelocity(currentMaxVelocity);
-            motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    private void runAllMotors(int[] motorTargetPositions) {
+        for (int i = 0; i < motorTargetPositions.length; i++) {
+            motorGroup[i].setTargetPosition(motorTargetPositions[i]);
+            motorGroup[i].setPower(1);
+            motorGroup[i].setVelocity(currentMaxVelocity);
+            motorGroup[i].setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
-
-
+        hasmoved = true;
     }
     private void stopAllMotors() {
         for (DcMotorEx motor : motorGroup) {
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motor.setPower(0);
         }
-
-        frontRight.setPower(0);
-        frontLeft.setPower(0);
-        backRight.setPower(0);
-        backLeft.setPower(0);
     }
     private void driveToAprilTag(AprilTagDetection tag, double abortDistance) {
         if (tag.metadata != null) {
@@ -442,17 +364,24 @@ public class SupraAutonomous extends LinearOpMode {
      * multiplies the distance by the robot's angle to calculate the slope distance for strafing.
      * Calculates the x (forward) power each wheel must have. The y (right) power depends on each
      * wheel as they have different angles
-     * @param objective1
-     * @param objective2
-     * @param wheelAngleOffsetX
-     * @param wheelAngleOffsetY
-     * @return
+     * @param objective1        does something
+     * @param objective2        does something
+     * @param wheelAngleOffsetX does something
+     * @param wheelAngleOffsetY does something
+     * @return                  a double array with 2 values
      */
     public double[] calculateStrafing(double objective1, double objective2, double wheelAngleOffsetX, double wheelAngleOffsetY) {
-        return new double[]{(objective1 * Math.cos(currentRotation + wheelAngleOffsetX)) / (objective1 * Math.sin(currentRotation + wheelAngleOffsetX)), (objective2 * Math.cos(currentRotation + wheelAngleOffsetY)) / (objective2 * Math.cos(currentRotation + wheelAngleOffsetY))};
+        return new double[]{(objective1 * Math.cos(currentRotation + wheelAngleOffsetX)) /
+                (objective1 * Math.sin(currentRotation + wheelAngleOffsetX)),
+                (objective2 * Math.cos(currentRotation + wheelAngleOffsetY)) /
+                (objective2 * Math.cos(currentRotation + wheelAngleOffsetY))};
     }
 
     public void setMaxVelocity(int minVelocity) {
-        currentMaxVelocity = (int) Math.max(minVelocity, Math.max(backRight.getVelocity(), Math.max(backLeft.getVelocity(), Math.max(frontLeft.getVelocity(), frontRight.getVelocity()))));
+        int max = 0;
+        for (DcMotorEx motor : motorGroup) {
+            max = (int) new MathExtended().max(max, motor.getVelocity());
+        }
+        currentMaxVelocity = (int) new MathExtended().max(max, minVelocity);
     }
 }
