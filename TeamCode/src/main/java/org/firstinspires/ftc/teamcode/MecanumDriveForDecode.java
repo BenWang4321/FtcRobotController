@@ -46,7 +46,7 @@ public class MecanumDriveForDecode extends LinearOpMode {
             // Get joystick values
             double fb = -gamepad1.left_stick_y; // Scale for smoother control
             double strafe = -gamepad1.left_stick_x; // Scale strafing
-            double turn = gamepad1.right_stick_x;
+            double turn = -gamepad1.right_stick_x;
 
             //fb & turn: fr, fl inverted
             //strafe: fr, bl inverted
@@ -66,7 +66,6 @@ public class MecanumDriveForDecode extends LinearOpMode {
             max = Math.max(max, Math.abs(backRightPower));
             max = Math.max(max, Math.abs(frontRightPower));
 
-
             if (max > 1) {
                 frontLeft.setPower(frontLeftPower / max);
                 frontRight.setPower(frontRightPower / max);
@@ -82,7 +81,7 @@ public class MecanumDriveForDecode extends LinearOpMode {
             elevator.setPower(gamepad2.left_stick_y);
             ejector1.setPower(gamepad2.right_stick_y);
             ejector2.setPower(gamepad2.right_stick_y);
-            intake.setPower(1);
+            intake.setPower(gamepad2.left_trigger);
 
             telemetry.addData("forward/backward power", fb);
             telemetry.addData("strafe power", strafe);
