@@ -25,10 +25,10 @@ public class MecanumDriveForDecode extends LinearOpMode {
         intake = hardwareMap.get(CRServo.class, "intake");
 
         // Reverse the right side motors for proper direction
-        frontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        backLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
         ejector1.setDirection(DcMotorSimple.Direction.FORWARD);
         ejector2.setDirection(DcMotorSimple.Direction.FORWARD);
 
