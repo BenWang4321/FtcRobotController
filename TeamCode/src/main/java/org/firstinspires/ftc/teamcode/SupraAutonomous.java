@@ -11,7 +11,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AngularVelocity;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -86,10 +85,9 @@ public class SupraAutonomous extends LinearOpMode {
         //distanceSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "ultrasonicSensor");
         motorGroup = new DcMotorEx[]{frontRight, frontLeft, backRight, backLeft};
 
-        frontLeft.setTargetPositionTolerance(positionTolerance);
-        backLeft.setTargetPositionTolerance(positionTolerance);
-        frontRight.setTargetPositionTolerance(positionTolerance);
-        backRight.setTargetPositionTolerance(positionTolerance);
+        for (DcMotorEx motor : motorGroup) {
+            motor.setTargetPositionTolerance(positionTolerance);
+        }
         IMU.Parameters myIMUparameters;
 
         myIMUparameters = new IMU.Parameters(
@@ -233,7 +231,6 @@ public class SupraAutonomous extends LinearOpMode {
      * so you can just add how much you want the motor to change,
      * not where you want the motor to change to.
      */
-
     private void executeCheckpoint() {
         for (DcMotorEx motor:motorGroup) {
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -256,17 +253,17 @@ public class SupraAutonomous extends LinearOpMode {
         double frontLeftSpeed = ((Math.sin(currentRotation + 315) * distance) + (Math.sin(currentRotation + 315) * distance));
         double backRightSpeed = ((Math.sin(currentRotation + 315) * distance) + (Math.sin(currentRotation + 315) * distance));
         double backLeftSpeed = ((Math.sin(currentRotation + 315) * distance) - (Math.sin(currentRotation + 315) * distance));
-        double max = Math.max(frontRightSpeed, Math.max(frontLeftSpeed, Math.max(backLeftSpeed, Math.min(backRightSpeed, 1))));
+        double max = new MathExtended().max(frontRightSpeed, frontLeftSpeed, backLeftSpeed, backRightSpeed, 1);
         frontRightSpeed /= max;
         frontLeftSpeed /= max;
         backRightSpeed /= max;
         backLeftSpeed /= max;
-        double strafePower = Math.max(frontRightSpeed, Math.max(frontLeftSpeed, Math.max(backRightSpeed, backLeftSpeed)));
+        double strafePower = new MathExtended().max(frontRightSpeed, frontLeftSpeed, backRightSpeed, backLeftSpeed, 1);
 
         //The speed required for strafing is the distance moved multiplied by the max speed the motor can move
         double strafeSpeed = strafePower * distance;
         //The speed required for driving straight is the turn speed plus the distance.
-        // The turn speed is the circumference distance of the robot / 2. The circumference is Pi * 2 * radii.
+        // The turn speed is the circumference distance of the robot / 2. The circumference is 2.
         // The radii is a wheels distance from the center of the robot. Rotating speed multiplied to compensate for acceleration.
         double straightSpeed = (motorDistancesFromRobot.get(0)[1] / ROTATIONS_PER_CM * Math.PI * orientationObjective) / 360 * 1.5 + distance;
         //Compares the required speed for strafing and Driving straight
@@ -380,8 +377,8 @@ public class SupraAutonomous extends LinearOpMode {
     public void setMaxVelocity(int minVelocity) {
         int max = 0;
         for (DcMotorEx motor : motorGroup) {
-            max = (int) new MathExtended().max(max, motor.getVelocity());
+            max = (int) Math.max(max, motor.getVelocity());
         }
-        currentMaxVelocity = (int) new MathExtended().max(max, minVelocity);
+        currentMaxVelocity = Math.max(max, minVelocity);
     }
 }

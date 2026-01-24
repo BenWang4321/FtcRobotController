@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import java.util.concurrent.LinkedTransferQueue;
-
 public class MathExtended {
     /**
      * The factorial function solves for a repeated sequence of multiplication,
@@ -11,17 +9,21 @@ public class MathExtended {
      * @return the factorial of x
      */
     public int factorial(int number) {
-        return number < 0 ? 0 : number == 1 || number == 0 ? 1 : number * factorial(number - 1);
+        return number < 0 ? 0 : number == 0 ? 1 : number * factorial(number - 1);
     }
 
     /**
-     * Solves for the exponentiation of the base and the exponent
-     * @param base      the base for the exponentiation. ex. the base in a^b would be a
-     * @param exponent  the exponent for the exponentiation. ex. the base in a^b would be b
-     * @return base ^ exponent
+     * This function can be used to describe a power tower so a^b^c^...,
+     * so you can use one method instead of nesting Math.pow()s.
+     * @param numbers the power tower, ordered from the very bottom to the top.
+     * @return        the result of the power tower.
+     *                Most of the time the numbers would be too large, too small, or not real.
      */
-    public double exp(double base, double exponent) {
-        return Math.exp(exponent * Math.log(base));
+    public double pow(double... numbers) {
+        double[] holder = new double[numbers.length - 1];
+        System.arraycopy(numbers, 0, holder, 0, holder.length - 1);
+        holder[holder.length - 1] = Math.pow(numbers[numbers.length - 2], numbers[numbers.length - 1]);
+        return holder.length == 1 ? holder[0] : pow(holder);
     }
 
     /**
@@ -127,6 +129,24 @@ public class MathExtended {
         for (double value : inputs) {
             for (double input : inputs) {
                 value = Math.max(value, input);
+                output = value;
+            }
+        }
+
+        return output;
+    }
+
+    /**
+     * Same as the Math.min() method, but can fit more than 2 terms
+     * @param inputs find the minimum value in these values
+     * @return       the minimum value in the inputted values
+     */
+    public double min(double... inputs) {
+        double output = 0;
+
+        for (double value : inputs) {
+            for (double input : inputs) {
+                value = Math.min(value, input);
                 output = value;
             }
         }

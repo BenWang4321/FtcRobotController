@@ -18,8 +18,12 @@ public class MoveAutonomous extends LinearOpMode {
         backRight = hardwareMap.get(DcMotorEx.class, "backRight");
         DcMotorEx[] motorGroup = new DcMotorEx[]{frontLeft, frontRight, backLeft, backRight};
 
+        frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
+
         for (DcMotorEx motor : motorGroup) {
-            motor.setDirection(DcMotorSimple.Direction.REVERSE);
             motor.setTargetPosition(0);
             motor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             motor.setPower(1);
