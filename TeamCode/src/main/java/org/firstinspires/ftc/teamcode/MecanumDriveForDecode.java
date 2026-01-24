@@ -61,27 +61,18 @@ public class MecanumDriveForDecode extends LinearOpMode {
             double backRightPower = fb - strafe - turn;
             double frontRightPower = -fb - strafe + turn;
 
-            double max = Math.max(1.0, Math.abs(frontLeftPower));
-            max = Math.max(max, Math.abs(backLeftPower));
-            max = Math.max(max, Math.abs(backRightPower));
-            max = Math.max(max, Math.abs(frontRightPower));
+            double max = new MathExtended().max(1.0, Math.abs(frontLeftPower),
+                    Math.abs(backLeftPower), Math.abs(backRightPower), Math.abs(frontRightPower));
 
-            if (max > 1) {
-                frontLeft.setPower(frontLeftPower / max);
-                frontRight.setPower(frontRightPower / max);
-                backLeft.setPower(backLeftPower / max);
-                backRight.setPower(backRightPower / max);
-            } else {
-                frontLeft.setPower(frontLeftPower);
-                frontRight.setPower(frontRightPower);
-                backLeft.setPower(backLeftPower);
-                backRight.setPower(backRightPower);
-            }
+            frontLeft.setPower(max > 1 ? frontLeftPower / max : frontLeftPower);
+            frontRight.setPower(max > 1 ? frontRightPower / max : frontRightPower);
+            backLeft.setPower(max > 1 ? backLeftPower / max : backLeftPower);
+            backRight.setPower(max > 1 ? backRightPower / max : backRightPower);
 
             elevator.setPower(-gamepad2.left_stick_y);
             ejector1.setPower(gamepad2.right_stick_y);
             ejector2.setPower(gamepad2.right_stick_y);
-            intake.setPower(gamepad2.right_stick_x);
+            intake.setPower(gamepad2.left_trigger);
 
             telemetry.addData("forward/backward power", fb);
             telemetry.addData("strafe power", strafe);
