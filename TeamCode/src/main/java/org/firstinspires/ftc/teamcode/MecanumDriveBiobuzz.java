@@ -16,9 +16,9 @@ public class MecanumDriveBiobuzz extends LinearOpMode{
         frontRight = hardwareMap.get(DcMotor.class, "frontRight");
         backLeft = hardwareMap.get(DcMotor.class, "backLeft");
         backRight = hardwareMap.get(DcMotor.class, "backRight");
-        // Reverse the right side motors for proper direction
+        // Edit direction
         frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
-        backRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        backRight.setDirection(DcMotorSimple.Direction.FORWARD);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         frontRight.setDirection(DcMotorSimple.Direction.FORWARD);
 
@@ -36,6 +36,8 @@ public class MecanumDriveBiobuzz extends LinearOpMode{
             double strafe = -gamepad1.left_stick_x; // Scale strafing
             double turn = -gamepad1.right_stick_x;
 
+            double motorValueMax = 1;
+
             //fb & turn: fr, fl inverted
             //strafe: fr, bl inverted
             /*original code:
@@ -49,7 +51,7 @@ public class MecanumDriveBiobuzz extends LinearOpMode{
             double backRightPower = fb - strafe - turn;
             double frontRightPower = -fb - strafe + turn;
 
-            double max = Math.max(1.0, Math.abs(frontLeftPower));
+            double max = Math.max(motorValueMax, Math.abs(frontLeftPower));
             max = Math.max(max, Math.abs(backLeftPower));
             max = Math.max(max, Math.abs(backRightPower));
             max = Math.max(max, Math.abs(frontRightPower));
@@ -66,6 +68,20 @@ public class MecanumDriveBiobuzz extends LinearOpMode{
                 backRight.setPower(backRightPower);
             }
 
+            if (gamepad1.left_bumper) {
+                motorValueMax = Math.min(motorValueMax - 0.001, 1);
+            } else if (gamepad1.right_bumper) {
+                motorValueMax = Math.max(motorValueMax + 0.001, 0);
+            } else if (gamepad1.a) {
+                motorValueMax = 1;
+            } else if (gamepad1.b) {
+                motorValueMax = 0.75;
+            } else if (gamepad1.x) {
+                motorValueMax = 0.5;
+            } else if (gamepad1.y) {
+                motorValueMax = 0.25;
+            }
+
             telemetry.addData("forward/backward power", fb);
             telemetry.addData("strafe power", strafe);
             telemetry.addData("turn power", turn);
@@ -73,6 +89,7 @@ public class MecanumDriveBiobuzz extends LinearOpMode{
             telemetry.addData("front right power", frontRightPower);
             telemetry.addData("back left power", backLeftPower);
             telemetry.addData("back right power", backRightPower);
+            telemetry.addData("\nmotor value max", motorValueMax);
             telemetry.update();
         }
     }

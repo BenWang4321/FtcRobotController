@@ -42,7 +42,7 @@ public class MathExtended {
      * @param lengths each item represents the length of a side of the cube.
      * @return the length of the longest diagonal in the cube.
      */
-    public double calculateDiagonal(double[] lengths) {
+    public double calculateDiagonal(double... lengths) {
         double holder = 0;
 
         for (double length : lengths) {

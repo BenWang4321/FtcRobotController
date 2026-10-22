@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 @Disabled
-@TeleOp (name="ColorSensor")
+@TeleOp (name="ColorSensor", group = "test")
 public class TestColorSensor extends LinearOpMode {
     // Define a variable for our color sensor
     ColorSensor color;
